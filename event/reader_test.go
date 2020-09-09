@@ -12,8 +12,6 @@ import (
 )
 
 func TestReader_Read(t *testing.T) {
-	t.Parallel()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	wr, err := event.NewWriter(ctx, "mem://test-topic")
 	assert.NoError(t, err)

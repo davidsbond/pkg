@@ -3,6 +3,8 @@ package event
 import (
 	"context"
 
+	"golang.org/x/sync/errgroup"
+
 	"pkg.dsb.dev/closers"
 )
 
@@ -34,18 +36,19 @@ func NewMultiReader(ctx context.Context, urls []string) (*MultiReader, error) {
 
 // Read events from the stream, invoking fn for each inbound event. This method will block until fn returns
 // an error or the provided context is cancelled.
-func (mr *MultiReader) Read(ctx context.Context, fn func(ctx context.Context, evt Event) error) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	errs := make(chan error, len(mr.readers))
-
+func (mr *MultiReader) Read(ctx context.Context, fn Handler) error {
+	grp, ctx := errgroup.WithContext(ctx)
 	for _, rd := range mr.readers {
-		go func(r *Reader) {
-			errs <- r.Read(ctx, fn)
-		}(rd)
+		mr.work(ctx, grp, rd, fn)
 	}
 
-	return <-errs
+	return grp.Wait()
+}
+
+func (mr *MultiReader) work(ctx context.Context, grp *errgroup.Group, rd *Reader, fn Handler) {
+	grp.Go(func() error {
+		return rd.Read(ctx, fn)
+	})
 }
 
 // Close all event stream connections.

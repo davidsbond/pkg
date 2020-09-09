@@ -3,6 +3,8 @@
 package event
 
 import (
+	"context"
+
 	// Gocloud driver for kafka event streaming.
 	_ "gocloud.dev/pubsub/kafkapubsub"
 	// Gocloud driver for in-memory event streaming.
@@ -17,4 +19,7 @@ type (
 		Topic   string // Set internally when reading, not used when writing.
 		Payload []byte
 	}
+
+	// The Handler type is a function that processes an inbound event.
+	Handler func(ctx context.Context, evt Event) error
 )
