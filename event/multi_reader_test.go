@@ -13,8 +13,6 @@ import (
 )
 
 func TestMultiReader_Read(t *testing.T) {
-	t.Parallel()
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	aWriter, err := event.NewWriter(ctx, "mem://a")

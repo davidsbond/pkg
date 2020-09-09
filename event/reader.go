@@ -33,7 +33,7 @@ func NewReader(ctx context.Context, urlStr string) (*Reader, error) {
 
 // Read events from the stream, invoking fn for each inbound event. This method will block until fn returns
 // an error or the provided context is cancelled.
-func (r *Reader) Read(ctx context.Context, fn func(ctx context.Context, evt Event) error) error {
+func (r *Reader) Read(ctx context.Context, fn Handler) error {
 	for ctx.Err() == nil {
 		msg, err := r.subscription.Receive(ctx)
 		if err != nil {
