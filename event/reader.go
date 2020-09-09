@@ -1,0 +1,66 @@
+package event
+
+import (
+	"context"
+	"net/url"
+	"time"
+
+	"github.com/opentracing/opentracing-go"
+	"gocloud.dev/pubsub"
+
+	"pkg.dsb.dev/tracing"
+)
+
+type (
+	// The Reader type is used to handle inbound events from a single topic.
+	Reader struct {
+		subscription *pubsub.Subscription
+		name         string
+	}
+)
+
+// NewReader creates a new instance of the Reader type that will read events from the configured
+// event stream provider identified using the given URL.
+func NewReader(ctx context.Context, urlStr string) (*Reader, error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
+	subscription, err := pubsub.OpenSubscription(ctx, urlStr)
+	return &Reader{subscription: subscription, name: u.Host}, err
+}
+
+// Read events from the stream, invoking fn for each inbound event. This method will block until fn returns
+// an error or the provided context is cancelled.
+func (r *Reader) Read(ctx context.Context, fn func(ctx context.Context, evt Event) error) error {
+	for ctx.Err() == nil {
+		msg, err := r.subscription.Receive(ctx)
+		if err != nil {
+			return err
+		}
+
+		span, ctx := opentracing.StartSpanFromContext(ctx, "event-read")
+		span.SetTag("event.topic", r.name)
+		evt := Event{Payload: msg.Body, Topic: r.name}
+		if err := fn(ctx, evt); err != nil {
+			msg.Nack()
+			err = tracing.WithError(span, err)
+			span.Finish()
+			return err
+		}
+
+		eventsRead.WithLabelValues(r.name).Inc()
+		msg.Ack()
+		span.Finish()
+	}
+
+	return ctx.Err()
+}
+
+// Close the connection to the event stream.
+func (r *Reader) Close() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	return r.subscription.Shutdown(ctx)
+}
