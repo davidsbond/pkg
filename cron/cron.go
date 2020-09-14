@@ -4,6 +4,10 @@ package cron
 import (
 	"context"
 	"time"
+
+	"github.com/opentracing/opentracing-go"
+
+	"pkg.dsb.dev/tracing"
 )
 
 type (
@@ -21,9 +25,14 @@ func Every(ctx context.Context, freq time.Duration, fn Action) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
+			span, ctx := opentracing.StartSpanFromContext(ctx, "cron-run")
+			span.SetTag("cron.frequency", freq)
 			if err := fn(ctx); err != nil {
-				return err
+				span.Finish()
+				return tracing.WithError(span, err)
 			}
+
+			span.Finish()
 		}
 	}
 }
