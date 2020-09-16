@@ -60,7 +60,8 @@ func (r *Reader) Read(ctx context.Context, fn Handler) error {
 
 // Close the connection to the event stream.
 func (r *Reader) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	const timeout = time.Second * 10
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return r.subscription.Shutdown(ctx)
 }
