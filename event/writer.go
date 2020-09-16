@@ -51,7 +51,8 @@ func (w *Writer) Write(ctx context.Context, evt Event) error {
 
 // Close the connection to the event stream.
 func (w *Writer) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	const timeout = time.Second * 10
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return w.topic.Shutdown(ctx)
 }
