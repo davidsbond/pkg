@@ -11,7 +11,7 @@ import (
 	"github.com/rs/xid"
 	"github.com/stretchr/testify/assert"
 
-	"pkg.dsb.dev/storage/postgres"
+	"pkg.dsb.dev/storage/database/postgres"
 )
 
 // WithPostgresInstance is a test helper function that creates a connection to a postgres
@@ -41,7 +41,7 @@ func WithPostgresInstance(t *testing.T) *sql.DB {
 
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable", pgUser, pgPass, pgHost, pgPort)
 
-	db, err := postgres.Open(url)
+	db, err := postgres.Open(url, nil)
 	if err != nil {
 		assert.FailNow(t, err.Error())
 		return nil
@@ -53,7 +53,7 @@ func WithPostgresInstance(t *testing.T) *sql.DB {
 	assert.NoError(t, db.Close())
 
 	url = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", pgUser, pgPass, pgHost, pgPort, dbName)
-	db, err = postgres.Open(url)
+	db, err = postgres.Open(url, nil)
 	if err != nil {
 		assert.FailNow(t, err.Error())
 		return nil

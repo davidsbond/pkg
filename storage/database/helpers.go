@@ -1,5 +1,5 @@
-// Package storage contains utilities for persistence methods used by the application.
-package storage
+// Package database contains utilities for interacting with databases.
+package database
 
 import (
 	"time"
