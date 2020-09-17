@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"pkg.dsb.dev/environment"
-	"pkg.dsb.dev/storage/postgres"
+	"pkg.dsb.dev/storage/database/postgres"
 	"pkg.dsb.dev/testutil"
 )
 
