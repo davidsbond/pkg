@@ -47,7 +47,11 @@ func At(ctx context.Context, at time.Time, fn Action) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case ts := <-ticker.C:
-			dur := ts.Sub(at)
+			dur := time.Date(
+				at.Year(), at.Month(), at.Day(), ts.Hour(),
+				ts.Minute(), ts.Second(), ts.Nanosecond(), ts.Location(),
+			).Sub(at)
+
 			if dur >= time.Second || dur <= -time.Second {
 				continue
 			}
