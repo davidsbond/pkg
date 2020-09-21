@@ -52,25 +52,9 @@ func Open(dsn string, migrations *database.MigrationSource) (*sql.DB, error) {
 		}
 	}
 
-	health.AddCheck("database", db.Ping)
+	health.AddCheck("postgres", db.Ping)
 	metrics.AddSQLStats(db)
 	return db, db.Ping()
-}
-
-// WithinTransaction invokes 'cb' within an SQL transaction. If the callback returns an error, the transaction
-// is rolled back.
-func WithinTransaction(ctx context.Context, db *sql.DB, cb func(ctx context.Context, tx *sql.Tx) error) error {
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	if err := cb(ctx, tx); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
 }
 
 // CreateDatabaseWithUser creates a new user-password combination as the owner of a desired
@@ -88,7 +72,7 @@ func CreateDatabaseWithUser(ctx context.Context, db *sql.DB, name, user, pass st
 		fmt.Sprintf(permQueryFmt, name, user),
 	}
 
-	return WithinTransaction(ctx, db, func(ctx context.Context, tx *sql.Tx) error {
+	return database.WithinTransaction(ctx, db, func(ctx context.Context, tx *sql.Tx) error {
 		for _, q := range queries {
 			if _, err := db.ExecContext(ctx, q); err != nil {
 				return err
