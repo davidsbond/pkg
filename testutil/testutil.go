@@ -8,16 +8,16 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/rs/xid"
 	"github.com/stretchr/testify/assert"
 
+	"pkg.dsb.dev/storage/database"
 	"pkg.dsb.dev/storage/database/postgres"
 )
 
 // WithPostgresInstance is a test helper function that creates a connection to a postgres
 // database configured by the environment. Once connected, migrations are performed. When the
 // test is finished, the database will be migrated down again.
-func WithPostgresInstance(t *testing.T) *sql.DB {
+func WithPostgresInstance(t *testing.T, migrations *database.MigrationSource) *sql.DB {
 	pgHost := os.Getenv("POSTGRES_HOST")
 	pgPort := os.Getenv("POSTGRES_PORT")
 	pgUser := os.Getenv("POSTGRES_USER")
@@ -41,18 +41,13 @@ func WithPostgresInstance(t *testing.T) *sql.DB {
 
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable", pgUser, pgPass, pgHost, pgPort)
 
-	db, err := postgres.Open(url, nil)
+	db, err := postgres.Open(url, migrations)
 	if err != nil {
 		assert.FailNow(t, err.Error())
 		return nil
 	}
 
-	dbName := xid.New().String()
-	_, err = db.Exec("CREATE DATABASE " + dbName)
-	assert.NoError(t, err)
-	assert.NoError(t, db.Close())
-
-	url = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", pgUser, pgPass, pgHost, pgPort, dbName)
+	url = fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable", pgUser, pgPass, pgHost, pgPort)
 	db, err = postgres.Open(url, nil)
 	if err != nil {
 		assert.FailNow(t, err.Error())
@@ -60,6 +55,10 @@ func WithPostgresInstance(t *testing.T) *sql.DB {
 	}
 
 	t.Cleanup(func() {
+		if migrations != nil {
+			assert.NoError(t, database.MigrateDown(migrations, db))
+		}
+
 		assert.NoError(t, db.Close())
 	})
 

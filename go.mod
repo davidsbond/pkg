@@ -19,7 +19,6 @@ require (
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/client_golang v1.7.1
-	github.com/rs/xid v1.2.1
 	github.com/sebdah/markdown-toc v0.0.0-20171116085747-3bb461875c34
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
