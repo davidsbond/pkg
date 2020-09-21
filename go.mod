@@ -16,6 +16,7 @@ require (
 	github.com/jackc/pgx/v4 v4.8.1
 	github.com/luna-duclos/instrumentedsql v1.1.3
 	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20200611091901-487c5ec83473
+	github.com/mattn/go-sqlite3 v1.14.3
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/client_golang v1.7.1

@@ -2,7 +2,11 @@
 package database
 
 import (
+	"context"
+	"database/sql"
 	"time"
+
+	"pkg.dsb.dev/multierror"
 
 	"github.com/jackc/pgtype"
 )
@@ -42,4 +46,19 @@ func ToInterval(dur time.Duration) pgtype.Interval {
 func FromInterval(interval pgtype.Interval) time.Duration {
 	const conversion = 1000
 	return time.Duration(interval.Microseconds * conversion)
+}
+
+// WithinTransaction invokes 'cb' within an SQL transaction. If the callback returns an error, the transaction
+// is rolled back.
+func WithinTransaction(ctx context.Context, db *sql.DB, cb func(ctx context.Context, tx *sql.Tx) error) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	if err := cb(ctx, tx); err != nil {
+		return multierror.Append(err, tx.Rollback())
+	}
+
+	return tx.Commit()
 }
