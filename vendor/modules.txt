@@ -382,9 +382,6 @@ github.com/quasilyte/go-ruleguard/ruleguard/typematch
 github.com/quasilyte/regex/syntax
 # github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 github.com/rcrowley/go-metrics
-# github.com/rs/xid v1.2.1
-## explicit
-github.com/rs/xid
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
 # github.com/ryancurrah/gomodguard v1.1.0

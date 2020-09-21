@@ -11,7 +11,7 @@ import (
 )
 
 func TestCreateDatabaseWithUser(t *testing.T) {
-	db := testutil.WithPostgresInstance(t)
+	db := testutil.WithPostgresInstance(t, nil)
 	ctx := environment.NewContext()
 
 	user := "test"
