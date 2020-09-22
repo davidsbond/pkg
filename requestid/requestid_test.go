@@ -32,9 +32,8 @@ func TestExtract(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.Name, func(t *testing.T) {
-			ctx := context.Background()
 			respHeader := make(http.Header)
-			ctx = requestid.Extract(ctx, tc.RequestHeader, respHeader)
+			_ = requestid.Extract(context.Background(), tc.RequestHeader, respHeader)
 
 			assert.NotEmpty(t, tc.RequestHeader.Get(key))
 			assert.NotEmpty(t, respHeader.Get(key))
