@@ -13,7 +13,7 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/jackc/pgtype v1.5.0
-	github.com/jackc/pgx/v4 v4.8.1
+	github.com/jackc/pgx/v4 v4.9.0
 	github.com/luna-duclos/instrumentedsql v1.1.3
 	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20200611091901-487c5ec83473
 	github.com/mattn/go-sqlite3 v1.14.3
