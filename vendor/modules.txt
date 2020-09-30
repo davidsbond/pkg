@@ -294,8 +294,6 @@ github.com/klauspost/compress/huff0
 github.com/klauspost/compress/snappy
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
-# github.com/konsorten/go-windows-terminal-sequences v1.0.3
-github.com/konsorten/go-windows-terminal-sequences
 # github.com/kyoh86/exportloopref v0.1.7
 github.com/kyoh86/exportloopref
 # github.com/leodido/go-urn v1.2.0
@@ -404,7 +402,7 @@ github.com/securego/gosec/v2/rules
 github.com/shazow/go-diff/difflib
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
 github.com/shurcooL/sanitized_anchor_name
-# github.com/sirupsen/logrus v1.6.0
+# github.com/sirupsen/logrus v1.7.0
 ## explicit
 github.com/sirupsen/logrus
 # github.com/sonatard/noctx v0.0.1
