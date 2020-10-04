@@ -112,6 +112,23 @@ func (txn *Txn) Set(ctx context.Context, key, value []byte) error {
 	return tracing.WithError(span, err)
 }
 
+// Delete deletes a key.
+//
+// This is done by adding a delete marker for the key at commit timestamp.  Any
+// reads happening before this timestamp would be unaffected. Any reads after
+// this commit would see the deletion.
+//
+// The current transaction keeps a reference to the key byte slice argument.
+// Users must not modify the key until the end of the transaction.
+func (txn *Txn) Delete(ctx context.Context, key []byte) error {
+	span, _ := opentracing.StartSpanFromContext(ctx, "badger-txn-delete")
+	defer span.Finish()
+	span.SetTag("item.key", key)
+
+	err := txn.inner.Delete(key)
+	return tracing.WithError(span, err)
+}
+
 // Value retrieves the value of the item from the value log.
 //
 // This method must be called within a transaction. Calling it outside a
