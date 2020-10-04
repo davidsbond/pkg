@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
+	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.7.0
 	github.com/go-playground/validator/v10 v10.4.0
 	github.com/gofrs/uuid v3.3.0+incompatible
