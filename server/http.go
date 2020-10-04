@@ -1,4 +1,4 @@
-// Package server contains utilities for managing different kinds of servers. Currently supports HTTP.
+// Package server contains utilities for managing different kinds of servers. Currently supports HTTP & gRPC.
 package server
 
 import (
@@ -19,7 +19,7 @@ import (
 )
 
 type (
-	config struct {
+	httpConfig struct {
 		handler         *mux.Router
 		securityEnabled bool
 		tlsCache        string
@@ -27,7 +27,7 @@ type (
 	}
 )
 
-var defaultConfig = config{
+var defaultHTTPConfig = httpConfig{
 	handler:  mux.NewRouter(),
 	tlsCache: "/cache",
 	tlsHostPolicy: func(_ context.Context, _ string) error {
@@ -37,7 +37,7 @@ var defaultConfig = config{
 
 // ServeHTTP starts the HTTP server. When the provided context is closed, the server is shut down.
 func ServeHTTP(ctx context.Context, opts ...HTTPOption) error {
-	c := defaultConfig
+	c := defaultHTTPConfig
 	for _, opt := range opts {
 		opt(&c)
 	}
@@ -76,7 +76,7 @@ func ServeHTTP(ctx context.Context, opts ...HTTPOption) error {
 		}
 		grp.Go(csvr.ListenAndServe)
 		grp.Go(func() error {
-			return waitForShutdown(ctx, csvr)
+			return waitForHTTPShutdown(ctx, csvr)
 		})
 	}
 
@@ -89,7 +89,7 @@ func ServeHTTP(ctx context.Context, opts ...HTTPOption) error {
 		return svr.ListenAndServe()
 	})
 	grp.Go(func() error {
-		return waitForShutdown(ctx, svr)
+		return waitForHTTPShutdown(ctx, svr)
 	})
 
 	err := grp.Wait()
@@ -104,7 +104,7 @@ func ServeHTTP(ctx context.Context, opts ...HTTPOption) error {
 	}
 }
 
-func waitForShutdown(ctx context.Context, svr *http.Server) error {
+func waitForHTTPShutdown(ctx context.Context, svr *http.Server) error {
 	<-ctx.Done()
 	const timeout = time.Second * 10
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)

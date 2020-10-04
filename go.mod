@@ -13,6 +13,8 @@ require (
 	github.com/golangci/golangci-lint v1.31.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jackc/pgtype v1.5.0
 	github.com/jackc/pgx/v4 v4.9.0
 	github.com/luna-duclos/instrumentedsql v1.1.3
@@ -32,5 +34,6 @@ require (
 	gocloud.dev/pubsub/kafkapubsub v0.20.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+	google.golang.org/grpc v1.31.0
 	mvdan.cc/gofumpt v0.0.0-20200802201014-ab5a8192947d
 )
