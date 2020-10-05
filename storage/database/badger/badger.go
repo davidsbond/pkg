@@ -30,15 +30,25 @@ type (
 	}
 )
 
-// Open a badger database using the provided options.
-func Open(options badger.Options) (*DB, error) {
-	inner, err := badger.Open(options)
+// Open a badger database using the provided options. Uses badger.DefaultOptions
+// storing data in a "badger" directory and disabling logging.
+func Open(opts ...Option) (*DB, error) {
+	// Default directory is named "badger" and logging is
+	// disabled.
+	c := badger.DefaultOptions("badger")
+	c.Logger = nil
+
+	for _, opt := range opts {
+		opt(&c)
+	}
+
+	inner, err := badger.Open(c)
 	if err != nil {
 		return nil, err
 	}
 
 	db := &DB{inner: inner}
-	health.AddCheck(options.Dir, db.Ping)
+	health.AddCheck(c.Dir, db.Ping)
 	return db, nil
 }
 

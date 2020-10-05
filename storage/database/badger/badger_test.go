@@ -5,14 +5,13 @@ import (
 	"os"
 	"testing"
 
-	bdg "github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
 
 	"pkg.dsb.dev/storage/database/badger"
 )
 
 func TestOpen(t *testing.T) {
-	db, err := badger.Open(bdg.DefaultOptions("test"))
+	db, err := badger.Open(badger.WithDir("test"))
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	t.Cleanup(func() {
