@@ -3,6 +3,7 @@ package badger
 
 import (
 	"context"
+	"io"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/opentracing/opentracing-go"
@@ -62,6 +63,29 @@ func (db *DB) Ping() error {
 // Close the connection to the database.
 func (db *DB) Close() error {
 	return db.inner.Close()
+}
+
+// Backup writes a full backup to the provided io.Writer implementation.
+func (db *DB) Backup(ctx context.Context, wr io.Writer) error {
+	span, _ := opentracing.StartSpanFromContext(ctx, "badger-backup")
+	defer span.Finish()
+
+	n, err := db.inner.Backup(wr, 0)
+	if err != nil {
+		return tracing.WithError(span, err)
+	}
+
+	span.SetTag("backup.timestamp", n)
+	return nil
+}
+
+// Restore the database to the dump provided in the io.Reader implementation.
+func (db *DB) Restore(ctx context.Context, rd io.Reader) error {
+	span, _ := opentracing.StartSpanFromContext(ctx, "badger-restore")
+	defer span.Finish()
+
+	const maxPending = 10
+	return tracing.WithError(span, db.inner.Load(rd, maxPending))
 }
 
 // View executes a function creating and managing a read-only transaction for the user. Error
