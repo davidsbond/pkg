@@ -4,9 +4,11 @@
 package grpc_validator
 
 import (
-	"golang.org/x/net/context"
+	"context"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type validator interface {
@@ -20,10 +22,24 @@ func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if v, ok := req.(validator); ok {
 			if err := v.Validate(); err != nil {
-				return nil, grpc.Errorf(codes.InvalidArgument, err.Error())
+				return nil, status.Errorf(codes.InvalidArgument, err.Error())
 			}
 		}
 		return handler(ctx, req)
+	}
+}
+
+// UnaryClientInterceptor returns a new unary client interceptor that validates outgoing messages.
+//
+// Invalid messages will be rejected with `InvalidArgument` before sending the request to server.
+func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if v, ok := req.(validator); ok {
+			if err := v.Validate(); err != nil {
+				return status.Errorf(codes.InvalidArgument, err.Error())
+			}
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 }
 
@@ -50,7 +66,7 @@ func (s *recvWrapper) RecvMsg(m interface{}) error {
 	}
 	if v, ok := m.(validator); ok {
 		if err := v.Validate(); err != nil {
-			return grpc.Errorf(codes.InvalidArgument, err.Error())
+			return status.Errorf(codes.InvalidArgument, err.Error())
 		}
 	}
 	return nil
