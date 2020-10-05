@@ -255,7 +255,7 @@ github.com/gorilla/handlers
 github.com/gorilla/mux
 # github.com/gostaticanalysis/analysisutil v0.0.3
 github.com/gostaticanalysis/analysisutil
-# github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
+# github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 ## explicit
 github.com/grpc-ecosystem/go-grpc-middleware
 github.com/grpc-ecosystem/go-grpc-middleware/recovery

@@ -13,7 +13,7 @@ require (
 	github.com/golangci/golangci-lint v1.31.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jackc/pgtype v1.5.0
 	github.com/jackc/pgx/v4 v4.9.0
