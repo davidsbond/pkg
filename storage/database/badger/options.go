@@ -34,10 +34,3 @@ func WithEncryptionKeyRotationDuration(dur time.Duration) Option {
 		opts.EncryptionKeyRotationDuration = dur
 	}
 }
-
-// WithLogger sets the logger that badger will use when writing logs.
-func WithLogger(logger badger.Logger) Option {
-	return func(opts *badger.Options) {
-		opts.Logger = logger
-	}
-}
