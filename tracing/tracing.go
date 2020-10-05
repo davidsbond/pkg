@@ -54,6 +54,7 @@ func New() (io.Closer, error) {
 			jaeger.ReporterOptions.BufferFlushInterval(config.bufferFlushInterval),
 			jaeger.ReporterOptions.Logger(logging.JaegerLogger()),
 		),
+		jaeger.TracerOptions.Logger(logging.JaegerLogger()),
 	)
 
 	opentracing.SetGlobalTracer(tracer)
