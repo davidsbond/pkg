@@ -8,6 +8,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 
 	"pkg.dsb.dev/health"
+	"pkg.dsb.dev/logging"
 	"pkg.dsb.dev/tracing"
 )
 
@@ -31,12 +32,12 @@ type (
 )
 
 // Open a badger database using the provided options. Uses badger.DefaultOptions
-// storing data in a "badger" directory and disabling logging.
+// storing data in a "badger" directory.
 func Open(opts ...Option) (*DB, error) {
 	// Default directory is named "badger" and logging is
 	// disabled.
 	c := badger.DefaultOptions("badger")
-	c.Logger = nil
+	c.Logger = logging.Logger()
 
 	for _, opt := range opts {
 		opt(&c)
