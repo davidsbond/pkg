@@ -47,6 +47,7 @@ func ServeGRPC(ctx context.Context, opts ...GRPCOption) error {
 
 	grp, ctx := errgroup.WithContext(ctx)
 	grp.Go(func() error {
+		logging.WithField("port", ":5000").Info("serving gRPC")
 		return svr.Serve(lis)
 	})
 	grp.Go(func() error {
