@@ -3,7 +3,6 @@ module pkg.dsb.dev
 go 1.15
 
 require (
-	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.7.0
 	github.com/go-playground/validator/v10 v10.4.0
@@ -22,7 +21,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.4
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/prometheus/client_golang v1.7.1
+	github.com/prometheus/client_golang v1.8.0
 	github.com/sebdah/markdown-toc v0.0.0-20171116085747-3bb461875c34
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
