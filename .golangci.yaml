@@ -25,3 +25,5 @@ issues:
   exclude-use-default: false
   exclude:
     - G102
+    - G304
+    - G204
