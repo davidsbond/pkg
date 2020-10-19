@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.7.0
-	github.com/go-playground/validator/v10 v10.4.0
+	github.com/go-playground/validator/v10 v10.4.1
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.13.0
 	github.com/golang/mock v1.4.4
