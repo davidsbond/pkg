@@ -22,8 +22,23 @@ func (c *NoopCloser) Close() error {
 }
 
 func TestClose(t *testing.T) {
+	t.Parallel()
+
 	c := &NoopCloser{err: io.EOF}
 
 	closers.Close(c)
 	assert.True(t, c.closed)
+}
+
+func TestCloseFunc(t *testing.T) {
+	t.Parallel()
+
+	called := false
+	c := closers.CloseFunc(func() error {
+		called = true
+		return nil
+	})
+
+	closers.Close(c)
+	assert.True(t, called)
 }
