@@ -13,29 +13,29 @@ type (
 // Append zero or more errors to a single error. Returns nil if the resulting
 // slice would be empty.
 func Append(err error, errs ...error) error {
-	switch e := err.(type) {
-	case multiError:
+	var e multiError
+	if errors.As(err, &e) {
 		return append(e, errs...)
-	default:
-		sl := make([]error, 0)
-		if e != nil {
-			sl = append(sl, e)
-		}
-
-		for _, e = range errs {
-			if e == nil {
-				continue
-			}
-
-			sl = append(sl, e)
-		}
-
-		if len(sl) == 0 {
-			return nil
-		}
-
-		return multiError(sl)
 	}
+
+	sl := make([]error, 0)
+	if err != nil {
+		sl = append(sl, err)
+	}
+
+	for _, err = range errs {
+		if err == nil {
+			continue
+		}
+
+		sl = append(sl, err)
+	}
+
+	if len(sl) == 0 {
+		return nil
+	}
+
+	return multiError(sl)
 }
 
 // Error returns a string containing all appended errors separated by semicolons.
