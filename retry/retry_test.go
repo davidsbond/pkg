@@ -31,5 +31,19 @@ func TestDo(t *testing.T) {
 		return io.EOF
 	}))
 
-	assert.EqualValues(t, 3, invoked)
+	assert.EqualValues(t, 4, invoked)
+}
+
+func TestStop(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	invoked := 0
+	assert.Error(t, retry.Do(ctx, 3, func(_ context.Context) error {
+		invoked++
+		return retry.Stop(io.EOF)
+	}))
+
+	assert.EqualValues(t, 1, invoked)
 }

@@ -3,6 +3,7 @@ module pkg.dsb.dev
 go 1.15
 
 require (
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.7.0
 	github.com/go-playground/validator/v10 v10.4.1
