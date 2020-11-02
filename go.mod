@@ -3,6 +3,8 @@ module pkg.dsb.dev
 go 1.15
 
 require (
+	github.com/HdrHistogram/hdrhistogram-go v1.0.0 // indirect
+	github.com/bufbuild/buf v0.29.0
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.7.0
@@ -10,6 +12,7 @@ require (
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.13.0
 	github.com/golang/mock v1.4.4
+	github.com/golang/protobuf v1.4.3
 	github.com/golangci/golangci-lint v1.32.1
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
@@ -18,7 +21,7 @@ require (
 	github.com/jackc/pgtype v1.6.1
 	github.com/jackc/pgx/v4 v4.9.1
 	github.com/luna-duclos/instrumentedsql v1.1.3
-	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20200611091901-487c5ec83473
+	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201015064105-f9d01e123f16
 	github.com/mattn/go-sqlite3 v1.14.4
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
@@ -27,13 +30,14 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/uber/jaeger-client-go v2.25.0+incompatible
-	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
+	github.com/uber/jaeger-lib v2.4.0+incompatible // indirect
 	github.com/unrolled/secure v1.0.8
 	github.com/urfave/cli/v2 v2.3.0
 	gocloud.dev v0.20.0
 	gocloud.dev/pubsub/kafkapubsub v0.20.0
-	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	google.golang.org/grpc v1.33.1
-	mvdan.cc/gofumpt v0.0.0-20200802201014-ab5a8192947d
+	google.golang.org/protobuf v1.25.0
+	mvdan.cc/gofumpt v0.0.0-20201027171050-85d5401eb0f6
 )
