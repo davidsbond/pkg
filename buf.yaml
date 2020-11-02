@@ -1,0 +1,12 @@
+version: v1beta1
+build:
+  roots:
+    - ./
+  excludes:
+    - vendor
+breaking:
+  use:
+    - FILE
+lint:
+  ignore:
+    - vendor
