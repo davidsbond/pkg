@@ -14,6 +14,8 @@ github.com/Masterminds/semver
 github.com/OpenPeeDeeP/depguard
 # github.com/Shopify/sarama v1.26.4
 github.com/Shopify/sarama
+# github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da
+github.com/armon/go-metrics
 # github.com/aws/aws-sdk-go v1.31.13
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/arn
@@ -326,6 +328,8 @@ github.com/golangci/prealloc
 github.com/golangci/revgrep
 # github.com/golangci/unconvert v0.0.0-20180507085042-28b1c447d1f4
 github.com/golangci/unconvert
+# github.com/google/btree v1.0.0
+github.com/google/btree
 # github.com/google/go-cmp v0.5.2
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
@@ -360,10 +364,18 @@ github.com/grpc-ecosystem/go-grpc-middleware/validator
 github.com/grpc-ecosystem/go-grpc-prometheus
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
+# github.com/hashicorp/go-immutable-radix v1.0.0
+github.com/hashicorp/go-immutable-radix
+# github.com/hashicorp/go-msgpack v0.5.3
+github.com/hashicorp/go-msgpack/codec
 # github.com/hashicorp/go-multierror v1.1.0
 github.com/hashicorp/go-multierror
+# github.com/hashicorp/go-sockaddr v1.0.0
+github.com/hashicorp/go-sockaddr
 # github.com/hashicorp/go-uuid v1.0.2
 github.com/hashicorp/go-uuid
+# github.com/hashicorp/golang-lru v0.5.1
+github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -375,6 +387,9 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
+# github.com/hashicorp/memberlist v0.1.3
+## explicit
+github.com/hashicorp/memberlist
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
 # github.com/jackc/chunkreader/v2 v2.0.1
@@ -460,6 +475,8 @@ github.com/mattn/go-sqlite3
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mbilski/exhaustivestruct v1.1.0
 github.com/mbilski/exhaustivestruct/pkg/analyzer
+# github.com/miekg/dns v1.0.14
+github.com/miekg/dns
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/mapstructure v1.1.2
@@ -536,6 +553,8 @@ github.com/russross/blackfriday/v2
 github.com/ryancurrah/gomodguard
 # github.com/ryanrolds/sqlclosecheck v0.3.0
 github.com/ryanrolds/sqlclosecheck/pkg/analyzer
+# github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529
+github.com/sean-/seed
 # github.com/sebdah/markdown-toc v0.0.0-20171116085747-3bb461875c34
 ## explicit
 github.com/sebdah/markdown-toc
@@ -673,6 +692,8 @@ gocloud.dev/pubsub/kafkapubsub
 ## explicit
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/md4
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/sha3
@@ -682,13 +703,18 @@ golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20200822124328-c89045814202
+golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
 golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
+golang.org/x/net/ipv4
+golang.org/x/net/ipv6
 golang.org/x/net/proxy
 golang.org/x/net/trace
 # golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
