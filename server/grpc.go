@@ -32,7 +32,7 @@ type (
 // ServeGRPC starts a gRPC server listening on port 5000 configured using the provided options. This function
 // blocks until the provided context is cancelled. On cancellation, the server is gracefully stopped.
 func ServeGRPC(ctx context.Context, opts ...GRPCOption) error {
-	c := defaultGRPCConfig
+	c := defaultGRPCConfig()
 	for _, opt := range opts {
 		opt(&c)
 	}
