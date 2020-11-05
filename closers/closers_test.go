@@ -42,3 +42,35 @@ func TestCloseFunc(t *testing.T) {
 	closers.Close(c)
 	assert.True(t, called)
 }
+
+func TestCloseAll(t *testing.T) {
+	t.Parallel()
+
+	cs := make([]io.Closer, 100)
+	noops := make([]*NoopCloser, 100)
+	for i := 0; i < 100; i++ {
+		noops[i] = &NoopCloser{}
+		cs[i] = noops[i]
+	}
+
+	closers.CloseAll(cs...)
+	for _, c := range noops {
+		assert.True(t, c.closed)
+	}
+}
+
+func TestMultiCloser_Close(t *testing.T) {
+	t.Parallel()
+
+	mc := closers.MultiCloser{}
+	noops := make([]*NoopCloser, 100)
+	for i := 0; i < 100; i++ {
+		noops[i] = &NoopCloser{}
+		mc.Add(noops[i])
+	}
+
+	assert.NoError(t, mc.Close())
+	for _, c := range noops {
+		assert.True(t, c.closed)
+	}
+}
