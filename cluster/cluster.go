@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/memberlist"
 
-	"pkg.dsb.dev/environment"
 	"pkg.dsb.dev/health"
 	"pkg.dsb.dev/multierror"
 )
@@ -28,10 +27,11 @@ type (
 	// The Metadata type contains fields advertised by nodes in the cluster that describe
 	// themselves.
 	Metadata struct {
-		Version                string    `json:"version,omitempty"`
-		ApplicationName        string    `json:"application_name,omitempty"`
-		ApplicationDescription string    `json:"application_description,omitempty"`
-		Compiled               time.Time `json:"compiled,omitempty"`
+		Version                string          `json:"version,omitempty"`
+		ApplicationName        string          `json:"application_name,omitempty"`
+		ApplicationDescription string          `json:"application_description,omitempty"`
+		Compiled               time.Time       `json:"compiled,omitempty"`
+		Extra                  json.RawMessage `json:"extra,omitempty"`
 	}
 )
 
@@ -63,17 +63,12 @@ func join(cnf *memberlist.Config, opts ...Option) (*Node, error) {
 	cnf.Events = &metricsDelegate{}
 	cnf.LogOutput = ioutil.Discard
 
-	c := &config{ml: cnf}
+	c := defaultConfig()
 	for _, opt := range opts {
 		opt(c)
 	}
 
-	md, err := json.Marshal(Metadata{
-		Version:                environment.Version,
-		ApplicationName:        environment.ApplicationName,
-		Compiled:               environment.Compiled(),
-		ApplicationDescription: environment.ApplicationDescription,
-	})
+	md, err := json.Marshal(c.md)
 	if err != nil {
 		return nil, err
 	}
