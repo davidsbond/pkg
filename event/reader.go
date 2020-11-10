@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
 	"gocloud.dev/pubsub"
 
 	"pkg.dsb.dev/tracing"
@@ -40,7 +39,13 @@ func (r *Reader) Read(ctx context.Context, fn Handler) error {
 			return err
 		}
 
-		span, ctx := opentracing.StartSpanFromContext(ctx, "event-read")
+		// If the message contains tracing information, start a new span as the child. This means traces work
+		// across events.
+		span, ctx, err := tracing.SpanFromMetadata(ctx, "event-read", msg.Metadata)
+		if err != nil {
+			return err
+		}
+
 		span.SetTag("event.topic", r.name)
 		evt := Event{Payload: msg.Body, Topic: r.name}
 		if err := fn(ctx, evt); err != nil {

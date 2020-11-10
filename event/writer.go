@@ -38,8 +38,15 @@ func (w *Writer) Write(ctx context.Context, evt Event) error {
 
 	span.SetTag("event.topic", w.name)
 
-	err := w.topic.Send(ctx, &pubsub.Message{
-		Body: evt.Payload,
+	// Include span metadata in event metadata.
+	md, err := tracing.SpanMetadata(span)
+	if err != nil {
+		return err
+	}
+
+	err = w.topic.Send(ctx, &pubsub.Message{
+		Body:     evt.Payload,
+		Metadata: md,
 	})
 	if err != nil {
 		return tracing.WithError(span, err)
