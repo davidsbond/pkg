@@ -1,9 +1,12 @@
 package cluster
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/hashicorp/memberlist"
+
+	"pkg.dsb.dev/environment"
 )
 
 type (
@@ -13,8 +16,21 @@ type (
 	config struct {
 		ml    *memberlist.Config
 		nodes []string
+		md    Metadata
 	}
 )
+
+func defaultConfig() *config {
+	return &config{
+		ml: memberlist.DefaultLocalConfig(),
+		md: Metadata{
+			Version:                environment.Version,
+			ApplicationName:        environment.ApplicationName,
+			Compiled:               environment.Compiled(),
+			ApplicationDescription: environment.ApplicationDescription,
+		},
+	}
+}
 
 // WithName sets the advertised name of the node, this should be unique across the cluster.
 func WithName(name string) Option {
@@ -44,5 +60,18 @@ func WithLogger(l *log.Logger) Option {
 	return func(cnf *config) {
 		cnf.ml.LogOutput = nil
 		cnf.ml.Logger = l
+	}
+}
+
+// WithExtraMetadata sets an additional metadata value that will be advertised to all nodes in the cluster. The
+// provided interface must allow JSON-encoding. Otherwise, this function will panic.
+func WithExtraMetadata(extra interface{}) Option {
+	return func(cnf *config) {
+		data, err := json.Marshal(extra)
+		if err != nil {
+			panic(err)
+		}
+
+		cnf.md.Extra = data
 	}
 }

@@ -3,6 +3,7 @@
 package tracing
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -97,4 +98,14 @@ func WrapHTTPHandler(h http.Handler) http.Handler {
 			// Ignore operational endpoints.
 			return !strings.HasPrefix(r.RequestURI, "/__/")
 		}))
+}
+
+// SetSpanTag adds the given key/value pair to the tags for the current span.
+func SetSpanTag(ctx context.Context, key string, val interface{}) {
+	span := opentracing.SpanFromContext(ctx)
+	if span == nil {
+		return
+	}
+
+	span.SetTag(key, val)
 }
