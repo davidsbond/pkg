@@ -4,6 +4,7 @@ package tracing
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -108,4 +109,33 @@ func SetSpanTag(ctx context.Context, key string, val interface{}) {
 	}
 
 	span.SetTag(key, val)
+}
+
+// SpanMetadata returns a map[string]string containing the metadata for the provided span. This should be used
+// for passing span information across application boundaries.
+func SpanMetadata(span opentracing.Span) (map[string]string, error) {
+	if span == nil {
+		return nil, nil
+	}
+
+	carrier := opentracing.TextMapCarrier{}
+	err := opentracing.GlobalTracer().Inject(span.Context(), opentracing.TextMap, carrier)
+	return carrier, err
+}
+
+// SpanFromMetadata starts a new span whose name is set to operationName. The previous span is extracted from the given
+// map[string]string. If no span metadata is set, a new span is started using whatever is inside the given context.
+func SpanFromMetadata(ctx context.Context, operationName string, md map[string]string) (opentracing.Span, context.Context, error) {
+	spanCtx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, opentracing.TextMapCarrier(md))
+	switch {
+	case errors.Is(err, opentracing.ErrSpanContextNotFound):
+		span, ctx := opentracing.StartSpanFromContext(ctx, operationName)
+		return span, ctx, nil
+	case err != nil:
+		return nil, nil, err
+	default:
+		span := opentracing.StartSpan(operationName, opentracing.ChildOf(spanCtx))
+		ctx := opentracing.ContextWithSpan(ctx, span)
+		return span, ctx, nil
+	}
 }
