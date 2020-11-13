@@ -19,7 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// NewExporter returns a new Exporter with a zap backend.
-func NewExporter(logger *zap.Logger) observability.TraceExportCloser {
-	return newExporter(logger)
+// NewTraceExportCloser returns a new TraceExportCloser with a zap backend.
+func NewTraceExportCloser(logger *zap.Logger) observability.TraceExportCloser {
+	return newTraceExportCloser(logger)
 }

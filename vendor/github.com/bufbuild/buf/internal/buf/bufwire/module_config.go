@@ -12,18 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package bufwire
 
 import (
-	"github.com/bufbuild/buf/internal/pkg/protodescriptor"
+	"github.com/bufbuild/buf/internal/buf/bufconfig"
+	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
 )
 
-// ValidateFileInfoPath validates the FileInfo path.
-func ValidateFileInfoPath(path string) error {
-	return protodescriptor.ValidateProtoPath("root relative file path", path)
+type moduleConfig struct {
+	module bufmodule.Module
+	config *bufconfig.Config
 }
 
-// ValidateFileInfoPaths validates the FileInfo paths.
-func ValidateFileInfoPaths(paths []string) error {
-	return protodescriptor.ValidateProtoPaths("root relative file path", paths)
+func newModuleConfig(module bufmodule.Module, config *bufconfig.Config) *moduleConfig {
+	return &moduleConfig{
+		module: module,
+		config: config,
+	}
+}
+
+func (m *moduleConfig) Module() bufmodule.Module {
+	return m.module
+}
+
+func (m *moduleConfig) Config() *bufconfig.Config {
+	return m.config
 }
