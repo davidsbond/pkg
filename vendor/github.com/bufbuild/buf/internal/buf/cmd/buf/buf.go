@@ -34,7 +34,7 @@ import (
 
 const (
 	// Version is the version of buf.
-	Version                 = "0.30.0"
+	Version                 = "0.31.0"
 	imageDeprecationMessage = `"image" sub-commands are now all implemented under the top-level "buf build" command, use "buf build" instead.
 We recommend migrating, however this command continues to work.
 See https://docs.buf.build/faq for more details.`
@@ -120,8 +120,9 @@ func NewRootCommand(
 			protoc.NewCommand("protoc", builder, moduleResolverReaderProvider),
 			lsfiles.NewCommand("ls-files", builder, moduleResolverReaderProvider),
 			{
-				Use:    "beta",
-				Short:  "Beta commands. Unstable and will likely change.",
+				Use:   "beta",
+				Short: "Beta commands. Unstable and will likely change.",
+				// TODO: remove
 				Hidden: true,
 				SubCommands: []*appcmd.Command{
 					{

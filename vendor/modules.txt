@@ -68,7 +68,7 @@ github.com/beorn7/perks/quantile
 github.com/bgentry/go-netrc/netrc
 # github.com/bombsimon/wsl/v3 v3.1.0
 github.com/bombsimon/wsl/v3
-# github.com/bufbuild/buf v0.30.0
+# github.com/bufbuild/buf v0.31.0
 ## explicit
 github.com/bufbuild/buf/cmd/buf
 github.com/bufbuild/buf/internal/buf/bufanalysis
@@ -85,12 +85,13 @@ github.com/bufbuild/buf/internal/buf/bufcheck/internal
 github.com/bufbuild/buf/internal/buf/bufcli
 github.com/bufbuild/buf/internal/buf/bufconfig
 github.com/bufbuild/buf/internal/buf/bufcore
+github.com/bufbuild/buf/internal/buf/bufcore/bufcoreprotoparse
 github.com/bufbuild/buf/internal/buf/bufcore/bufimage
 github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimagebuild
 github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimageutil
 github.com/bufbuild/buf/internal/buf/bufcore/bufmodule
 github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/bufmodulebuild
-github.com/bufbuild/buf/internal/buf/bufcore/internal
+github.com/bufbuild/buf/internal/buf/bufcore/internal/bufcorevalidate
 github.com/bufbuild/buf/internal/buf/buffetch
 github.com/bufbuild/buf/internal/buf/buffetch/internal
 github.com/bufbuild/buf/internal/buf/bufgen
@@ -104,7 +105,6 @@ github.com/bufbuild/buf/internal/buf/cmd/buf/command/check/lsbreakingcheckers
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/check/lslintcheckers
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/convert
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/generate
-github.com/bufbuild/buf/internal/buf/cmd/buf/command/internal
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/lsfiles
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/protoc
 github.com/bufbuild/buf/internal/gen/data/wkt
@@ -330,7 +330,7 @@ github.com/golangci/revgrep
 github.com/golangci/unconvert
 # github.com/google/btree v1.0.0
 github.com/google/btree
-# github.com/google/go-cmp v0.5.2
+# github.com/google/go-cmp v0.5.3
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -417,11 +417,12 @@ github.com/jackc/pgx/v4/stdlib
 # github.com/jcmturner/gofork v1.0.0
 github.com/jcmturner/gofork/encoding/asn1
 github.com/jcmturner/gofork/x/crypto/pbkdf2
-# github.com/jhump/protoreflect v1.7.1-0.20200723220026-11eaaf73e0ec
+# github.com/jhump/protoreflect v1.7.1-0.20200924151349-0050302ca4f8
 github.com/jhump/protoreflect/codec
 github.com/jhump/protoreflect/desc
 github.com/jhump/protoreflect/desc/internal
 github.com/jhump/protoreflect/desc/protoparse
+github.com/jhump/protoreflect/desc/protoparse/ast
 github.com/jhump/protoreflect/dynamic
 github.com/jhump/protoreflect/internal
 github.com/jhump/protoreflect/internal/codec
@@ -434,7 +435,7 @@ github.com/jmespath/go-jmespath
 # github.com/kisielk/gotool v1.0.0
 github.com/kisielk/gotool
 github.com/kisielk/gotool/internal/load
-# github.com/klauspost/compress v1.11.2
+# github.com/klauspost/compress v1.11.3
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
@@ -720,7 +721,7 @@ golang.org/x/net/trace
 # golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20201101102859-da207088b7d1
+# golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -805,7 +806,7 @@ golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/genproto v0.0.0-20201103154000-415bd0cd5df6
+# google.golang.org/genproto v0.0.0-20201116144945-7adebfbe6a3f
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/protobuf/api
 google.golang.org/genproto/protobuf/field_mask
@@ -855,7 +856,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.25.0
+# google.golang.org/protobuf v1.25.1-0.20201020201750-d3470999428b
 ## explicit
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
 google.golang.org/protobuf/compiler/protogen
@@ -871,13 +872,12 @@ google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text
 google.golang.org/protobuf/internal/errors
-google.golang.org/protobuf/internal/fieldsort
 google.golang.org/protobuf/internal/filedesc
 google.golang.org/protobuf/internal/filetype
 google.golang.org/protobuf/internal/flags
 google.golang.org/protobuf/internal/genid
 google.golang.org/protobuf/internal/impl
-google.golang.org/protobuf/internal/mapsort
+google.golang.org/protobuf/internal/order
 google.golang.org/protobuf/internal/pragma
 google.golang.org/protobuf/internal/set
 google.golang.org/protobuf/internal/strs
