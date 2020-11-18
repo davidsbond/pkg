@@ -25,7 +25,6 @@ import (
 	"github.com/bufbuild/buf/internal/buf/bufconfig"
 	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
-	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/internal"
 	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
 	"github.com/bufbuild/buf/internal/pkg/app/appflag"
 	"github.com/bufbuild/buf/internal/pkg/stringutil"
@@ -36,7 +35,7 @@ import (
 const (
 	errorFormatFlagName       = "error-format"
 	excludeImportsFlagName    = "exclude-imports"
-	filesFlagName             = "file"
+	pathsFlagName             = "path"
 	limitToInputFilesFlagName = "limit-to-input-files"
 	configFlagName            = "config"
 	againstFlagName           = "against"
@@ -50,6 +49,8 @@ const (
 	againstInputFlagName = "against-input"
 	// deprecated
 	againstInputConfigFlagName = "against-input-config"
+	// deprecated
+	filesFlagName = "file"
 )
 
 // NewCommand returns a new Command.
@@ -62,7 +63,7 @@ func NewCommand(
 	return &appcmd.Command{
 		Use:   name + " --against against-input <input>",
 		Short: "Check that the input location has no breaking changes compared to the against location.",
-		Long:  internal.GetInputLong(`the source, module, or image to check for breaking changes`),
+		Long:  bufcli.GetInputLong(`the source, module, or image to check for breaking changes`),
 		Args:  cobra.MaximumNArgs(1),
 		Run: builder.NewRunFunc(
 			func(ctx context.Context, container appflag.Container) error {
@@ -76,8 +77,8 @@ func NewCommand(
 type flags struct {
 	ErrorFormat       string
 	ExcludeImports    bool
-	Files             []string
 	LimitToInputFiles bool
+	Paths             []string
 	Config            string
 	Against           string
 	AgainstConfig     string
@@ -90,6 +91,8 @@ type flags struct {
 	AgainstInput string
 	// deprecated
 	AgainstInputConfig string
+	// deprecated
+	Files []string
 	// special
 	InputHashtag string
 }
@@ -99,7 +102,8 @@ func newFlags() *flags {
 }
 
 func (f *flags) Bind(flagSet *pflag.FlagSet) {
-	internal.BindInputHashtag(flagSet, &f.InputHashtag)
+	bufcli.BindPathsAndDeprecatedFiles(flagSet, &f.Paths, pathsFlagName, &f.Files, filesFlagName)
+	bufcli.BindInputHashtag(flagSet, &f.InputHashtag)
 	flagSet.StringVar(
 		&f.ErrorFormat,
 		errorFormatFlagName,
@@ -115,19 +119,16 @@ func (f *flags) Bind(flagSet *pflag.FlagSet) {
 		false,
 		"Exclude imports from breaking change detection.",
 	)
-	flagSet.StringSliceVar(
-		&f.Files,
-		filesFlagName,
-		nil,
-		`Limit to specific files. This is an advanced feature and is not recommended.`,
-	)
 	flagSet.BoolVar(
 		&f.LimitToInputFiles,
 		limitToInputFilesFlagName,
 		false,
-		`Only run breaking checks against the files in the input.
+		fmt.Sprintf(
+			`Only run breaking checks against the files in the input.
 This has the effect of filtering the against input to only contain the files in the input.
-Overrides --file.`,
+Overrides --%s.`,
+			pathsFlagName,
+		),
 	)
 	flagSet.StringVar(
 		&f.Config,
@@ -163,7 +164,7 @@ Overrides --file.`,
 	)
 	_ = flagSet.MarkDeprecated(
 		inputFlagName,
-		`input as the first argument instead.`+internal.FlagDeprecationMessageSuffix,
+		`input as the first argument instead.`+bufcli.FlagDeprecationMessageSuffix,
 	)
 	_ = flagSet.MarkHidden(inputFlagName)
 	// deprecated
@@ -175,7 +176,7 @@ Overrides --file.`,
 	)
 	_ = flagSet.MarkDeprecated(
 		inputConfigFlagName,
-		fmt.Sprintf("use --%s instead.%s", configFlagName, internal.FlagDeprecationMessageSuffix),
+		fmt.Sprintf("use --%s instead.%s", configFlagName, bufcli.FlagDeprecationMessageSuffix),
 	)
 	_ = flagSet.MarkHidden(inputConfigFlagName)
 	// deprecated
@@ -190,7 +191,7 @@ Overrides --file.`,
 	)
 	_ = flagSet.MarkDeprecated(
 		againstInputFlagName,
-		fmt.Sprintf("use --%s instead.%s", againstFlagName, internal.FlagDeprecationMessageSuffix),
+		fmt.Sprintf("use --%s instead.%s", againstFlagName, bufcli.FlagDeprecationMessageSuffix),
 	)
 	_ = flagSet.MarkHidden(againstInputFlagName)
 	// deprecated
@@ -202,7 +203,7 @@ Overrides --file.`,
 	)
 	_ = flagSet.MarkDeprecated(
 		againstInputConfigFlagName,
-		fmt.Sprintf("use --%s instead.%s", againstConfigFlagName, internal.FlagDeprecationMessageSuffix),
+		fmt.Sprintf("use --%s instead.%s", againstConfigFlagName, bufcli.FlagDeprecationMessageSuffix),
 	)
 	_ = flagSet.MarkHidden(againstInputConfigFlagName)
 }
@@ -213,11 +214,11 @@ func run(
 	flags *flags,
 	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
 ) error {
-	input, err := internal.GetInputValue(container, flags.InputHashtag, flags.Input, inputFlagName, ".")
+	input, err := bufcli.GetInputValue(container, flags.InputHashtag, flags.Input, inputFlagName, ".")
 	if err != nil {
 		return err
 	}
-	inputConfig, err := internal.GetFlagOrDeprecatedFlag(
+	inputConfig, err := bufcli.GetStringFlagOrDeprecatedFlag(
 		flags.Config,
 		configFlagName,
 		flags.InputConfig,
@@ -226,7 +227,7 @@ func run(
 	if err != nil {
 		return err
 	}
-	againstInput, err := internal.GetFlagOrDeprecatedFlag(
+	againstInput, err := bufcli.GetStringFlagOrDeprecatedFlag(
 		flags.Against,
 		againstFlagName,
 		flags.AgainstInput,
@@ -235,7 +236,7 @@ func run(
 	if err != nil {
 		return err
 	}
-	againstInputConfig, err := internal.GetFlagOrDeprecatedFlag(
+	againstInputConfig, err := bufcli.GetStringFlagOrDeprecatedFlag(
 		flags.AgainstConfig,
 		againstConfigFlagName,
 		flags.AgainstInputConfig,
@@ -246,6 +247,15 @@ func run(
 	}
 	if againstInput == "" {
 		return appcmd.NewInvalidArgumentErrorf("Flag --%s is required.", againstFlagName)
+	}
+	paths, err := bufcli.GetStringSliceFlagOrDeprecatedFlag(
+		flags.Paths,
+		pathsFlagName,
+		flags.Files,
+		filesFlagName,
+	)
+	if err != nil {
+		return err
 	}
 	ref, err := buffetch.NewRefParser(container.Logger()).GetRef(ctx, input)
 	if err != nil {
@@ -260,19 +270,19 @@ func run(
 	if err != nil {
 		return err
 	}
-	env, fileAnnotations, err := bufcli.NewWireEnvReader(
+	imageConfig, fileAnnotations, err := bufcli.NewWireImageConfigReader(
 		container.Logger(),
 		configProvider,
 		moduleResolver,
 		moduleReader,
-	).GetEnv(
+	).GetImageConfig(
 		ctx,
 		container,
 		ref,
 		inputConfig,
-		flags.Files, // we filter checks for files
-		false,       // files specified must exist on the main input
-		false,       // we must include source info for this side of the check
+		paths, // we filter checks for files
+		false, // files specified must exist on the main input
+		false, // we must include source info for this side of the check
 	)
 	if err != nil {
 		return err
@@ -287,14 +297,14 @@ func run(
 		}
 		return errors.New("")
 	}
-	image := env.Image()
+	image := imageConfig.Image()
 	if flags.ExcludeImports {
 		image = bufimage.ImageWithoutImports(image)
 	}
 
 	// TODO: this doesn't actually work because we're using the same file paths for both sides
 	// if the roots change, then we're torched
-	externalPaths := flags.Files
+	externalPaths := paths
 	if flags.LimitToInputFiles {
 		files := image.Files()
 		// we know that the file descriptors have unique names from validation
@@ -308,12 +318,12 @@ func run(
 	if err != nil {
 		return err
 	}
-	againstEnv, fileAnnotations, err := bufcli.NewWireEnvReader(
+	againstImageConfig, fileAnnotations, err := bufcli.NewWireImageConfigReader(
 		container.Logger(),
 		configProvider,
 		moduleResolver,
 		moduleReader,
-	).GetEnv(
+	).GetImageConfig(
 		ctx,
 		container,
 		againstRef,
@@ -335,13 +345,13 @@ func run(
 		}
 		return errors.New("")
 	}
-	againstImage := againstEnv.Image()
+	againstImage := againstImageConfig.Image()
 	if flags.ExcludeImports {
 		againstImage = bufimage.ImageWithoutImports(againstImage)
 	}
 	fileAnnotations, err = bufbreaking.NewHandler(container.Logger()).Check(
 		ctx,
-		env.Config().Breaking,
+		imageConfig.Config().Breaking,
 		againstImage,
 		image,
 	)

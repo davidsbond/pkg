@@ -20,7 +20,6 @@ import (
 
 	"github.com/bufbuild/buf/internal/buf/bufcli"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
-	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/internal"
 	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
 	"github.com/bufbuild/buf/internal/pkg/app/appflag"
 	"github.com/spf13/cobra"
@@ -31,11 +30,14 @@ const (
 	asFileDescriptorSetFlagName = "as-file-descriptor-set"
 	excludeImportsFlagName      = "exclude-imports"
 	excludeSourceInfoFlagName   = "exclude-source-info"
-	filesFlagName               = "file"
+	pathsFlagName               = "path"
 	outputFlagName              = "output"
 	outputFlagShortName         = "o"
 	imageFlagName               = "image"
 	imageFlagShortName          = "i"
+
+	// deprecated
+	filesFlagName = "file"
 )
 
 // NewCommand returns a new Command.
@@ -67,9 +69,12 @@ type flags struct {
 	AsFileDescriptorSet bool
 	ExcludeImports      bool
 	ExcludeSourceInfo   bool
-	Files               []string
+	Paths               []string
 	Image               string
 	Output              string
+
+	// deprecated
+	Files []string
 }
 
 func newFlags() *flags {
@@ -77,10 +82,10 @@ func newFlags() *flags {
 }
 
 func (f *flags) Bind(flagSet *pflag.FlagSet) {
-	internal.BindAsFileDescriptorSet(flagSet, &f.AsFileDescriptorSet, asFileDescriptorSetFlagName)
-	internal.BindExcludeImports(flagSet, &f.ExcludeImports, excludeImportsFlagName)
-	internal.BindExcludeSourceInfo(flagSet, &f.ExcludeSourceInfo, excludeSourceInfoFlagName)
-	internal.BindFiles(flagSet, &f.Files, filesFlagName)
+	bufcli.BindAsFileDescriptorSet(flagSet, &f.AsFileDescriptorSet, asFileDescriptorSetFlagName)
+	bufcli.BindExcludeImports(flagSet, &f.ExcludeImports, excludeImportsFlagName)
+	bufcli.BindExcludeSourceInfo(flagSet, &f.ExcludeSourceInfo, excludeSourceInfoFlagName)
+	bufcli.BindPathsAndDeprecatedFiles(flagSet, &f.Paths, pathsFlagName, &f.Files, filesFlagName)
 	flagSet.StringVarP(
 		&f.Image,
 		imageFlagName,
@@ -107,6 +112,15 @@ func run(ctx context.Context, container appflag.Container, flags *flags) (retErr
 	if flags.Output == "" {
 		return appcmd.NewInvalidArgumentErrorf("--%s is required", outputFlagName)
 	}
+	paths, err := bufcli.GetStringSliceFlagOrDeprecatedFlag(
+		flags.Paths,
+		pathsFlagName,
+		flags.Files,
+		filesFlagName,
+	)
+	if err != nil {
+		return err
+	}
 	imageRef, err := buffetch.NewImageRefParser(container.Logger()).GetImageRef(ctx, flags.Image)
 	if err != nil {
 		return fmt.Errorf("--%s: %v", imageFlagName, err)
@@ -117,7 +131,7 @@ func run(ctx context.Context, container appflag.Container, flags *flags) (retErr
 		ctx,
 		container,
 		imageRef,
-		flags.Files,
+		paths,
 		false,
 		flags.ExcludeSourceInfo,
 	)
