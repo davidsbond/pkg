@@ -26,6 +26,7 @@ import (
 	"github.com/bufbuild/buf/internal/buf/bufgen"
 	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
 	"github.com/bufbuild/buf/internal/pkg/app/appflag"
+	"github.com/bufbuild/buf/internal/pkg/storage/storageos"
 	"github.com/bufbuild/buf/internal/pkg/stringutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -117,6 +118,10 @@ $ buf generate --path proto/foo/foo.proto --path proto/foo/bar.proto
 
 # Only generate for the files in the directory proto/foo on your GitHub repository
 $ buf generate --template buf.gen.yaml https://github.com/foo/bar.git --path proto/foo
+
+Note that all paths must be contained within a root. For example, if you have the single
+root "proto", you cannot specify "--path proto", however "--path proto/foo" is allowed
+as "proto/foo" is contained within "proto".
 
 Plugins are invoked in the order they are specified in the template, but each plugin
 has a per-directory parallel invocation, with results from each invocation combined
@@ -258,8 +263,10 @@ func run(
 	if err != nil {
 		return err
 	}
+	storageosProvider := storageos.NewProvider(storageos.ProviderWithSymlinks())
 	imageConfig, fileAnnotations, err := bufcli.NewWireImageConfigReader(
 		logger,
+		storageosProvider,
 		bufconfig.NewProvider(logger),
 		moduleResolver,
 		moduleReader,
@@ -281,7 +288,7 @@ func run(
 		}
 		return errors.New("")
 	}
-	return bufgen.NewGenerator(logger).Generate(
+	return bufgen.NewGenerator(logger, storageosProvider).Generate(
 		ctx,
 		container,
 		genConfig,
