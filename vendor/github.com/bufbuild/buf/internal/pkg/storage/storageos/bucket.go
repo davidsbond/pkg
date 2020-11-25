@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bufbuild/buf/internal/pkg/filepathextended"
 	"github.com/bufbuild/buf/internal/pkg/normalpath"
 	"github.com/bufbuild/buf/internal/pkg/storage"
 	"github.com/bufbuild/buf/internal/pkg/storage/storageutil"
@@ -31,11 +32,18 @@ var errNotDir = errors.New("not a directory")
 
 type bucket struct {
 	rootPath string
+	symlinks bool
 }
 
-func newBucket(rootPath string) (*bucket, error) {
+func newBucket(rootPath string, symlinks bool) (*bucket, error) {
 	rootPath = normalpath.Unnormalize(rootPath)
-	fileInfo, err := os.Stat(rootPath)
+	var fileInfo os.FileInfo
+	var err error
+	if symlinks {
+		fileInfo, err = os.Stat(rootPath)
+	} else {
+		fileInfo, err = os.Lstat(rootPath)
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, storage.NewErrNotExist(rootPath)
@@ -50,6 +58,7 @@ func newBucket(rootPath string) (*bucket, error) {
 	rootPath = normalpath.Normalize(rootPath)
 	return &bucket{
 		rootPath: rootPath,
+		symlinks: symlinks,
 	}, nil
 }
 
@@ -61,7 +70,14 @@ func (b *bucket) Get(ctx context.Context, path string) (storage.ReadObjectCloser
 	if err := b.validateExternalPath(path, externalPath); err != nil {
 		return nil, err
 	}
-	file, err := os.Open(externalPath)
+	resolvedPath := externalPath
+	if b.symlinks {
+		resolvedPath, err = filepath.EvalSymlinks(externalPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	file, err := os.Open(resolvedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +114,11 @@ func (b *bucket) Walk(
 		return err
 	}
 	walkChecker := storageutil.NewWalkChecker()
-	// Walk does not follow symlinks
-	if err := filepath.Walk(
+	var walkOptions []filepathextended.WalkOption
+	if b.symlinks {
+		walkOptions = append(walkOptions, filepathextended.WalkWithSymlinks())
+	}
+	if err := filepathextended.Walk(
 		externalPrefix,
 		func(externalPath string, fileInfo os.FileInfo, err error) error {
 			if err != nil {
@@ -129,6 +148,7 @@ func (b *bucket) Walk(
 			}
 			return nil
 		},
+		walkOptions...,
 	); err != nil {
 		if os.IsNotExist(err) {
 			// Should be a no-op according to the spec.
@@ -145,7 +165,12 @@ func (b *bucket) Put(ctx context.Context, path string) (storage.WriteObjectClose
 		return nil, err
 	}
 	externalDir := filepath.Dir(externalPath)
-	fileInfo, err := os.Stat(externalDir)
+	var fileInfo os.FileInfo
+	if b.symlinks {
+		fileInfo, err = os.Stat(externalDir)
+	} else {
+		fileInfo, err = os.Lstat(externalDir)
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			if err := os.MkdirAll(externalDir, 0755); err != nil {
@@ -198,10 +223,15 @@ func (b *bucket) getExternalPath(path string) (string, error) {
 
 func (b *bucket) validateExternalPath(path string, externalPath string) error {
 	// this is potentially introducing two calls to a file
-	// instead of one, ie we do both Stat and Open as opposed
-	// to just Open
+	// instead of one, ie we do both Stat and Open as opposed to just Open
 	// we do this to make sure we are only reading regular files
-	fileInfo, err := os.Stat(externalPath)
+	var fileInfo os.FileInfo
+	var err error
+	if b.symlinks {
+		fileInfo, err = os.Stat(externalPath)
+	} else {
+		fileInfo, err = os.Lstat(externalPath)
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			return storage.NewErrNotExist(path)
