@@ -38,7 +38,7 @@ require (
 	gocloud.dev/pubsub/kafkapubsub v0.20.0
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	google.golang.org/grpc v1.33.2
+	google.golang.org/grpc v1.34.0
 	google.golang.org/protobuf v1.25.1-0.20201020201750-d3470999428b
 	mvdan.cc/gofumpt v0.0.0-20201027171050-85d5401eb0f6
 )
