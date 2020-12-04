@@ -19,7 +19,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/memberlist v0.2.2
-	github.com/jackc/pgtype v1.6.1
+	github.com/jackc/pgtype v1.6.2
 	github.com/jackc/pgx/v4 v4.9.2
 	github.com/luna-duclos/instrumentedsql v1.1.3
 	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201015064105-f9d01e123f16
