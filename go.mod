@@ -34,9 +34,9 @@ require (
 	github.com/uber/jaeger-lib v2.4.0+incompatible // indirect
 	github.com/unrolled/secure v1.0.8
 	github.com/urfave/cli/v2 v2.3.0
-	gocloud.dev v0.20.0
+	gocloud.dev v0.21.0
 	gocloud.dev/pubsub/kafkapubsub v0.20.0
-	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
+	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	google.golang.org/grpc v1.34.0
 	google.golang.org/protobuf v1.25.1-0.20201020201750-d3470999428b
