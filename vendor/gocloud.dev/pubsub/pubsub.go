@@ -258,7 +258,7 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 
 	t.mu.Lock()
 	if t.err == errTopicShutdown {
-		t.mu.Unlock()
+		defer t.mu.Unlock()
 		return t.err
 	}
 	t.err = errTopicShutdown
@@ -560,9 +560,12 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 					s.err = err
 				} else if len(msgs) > 0 {
 					s.q = append(s.q, msgs...)
-					if s.throughputStart.IsZero() {
-						s.throughputStart = time.Now()
-					}
+				}
+				// Set the start time for measuring throughput even if we didn't get
+				// any messages; this allows batch size to decay over time if there
+				// aren't any message available.
+				if s.throughputStart.IsZero() {
+					s.throughputStart = time.Now()
 				}
 				close(s.waitc)
 				s.waitc = nil
@@ -607,8 +610,8 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			})
 			return m2, nil
 		}
-		// No messages are available.
-		if s.throughputEnd.IsZero() && !s.throughputStart.IsZero() {
+		// No messages are available. Close the interval for throughput measurement.
+		if s.throughputEnd.IsZero() && !s.throughputStart.IsZero() && s.throughputCount > 0 {
 			s.throughputEnd = time.Now()
 		}
 		// A call to ReceiveBatch must be in flight. Wait for it.
@@ -673,7 +676,7 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	s.mu.Lock()
 	if s.err == errSubscriptionShutdown {
 		// Already Shutdown.
-		s.mu.Unlock()
+		defer s.mu.Unlock()
 		return s.err
 	}
 	s.err = errSubscriptionShutdown
