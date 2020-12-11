@@ -69,7 +69,7 @@ github.com/beorn7/perks/quantile
 github.com/bgentry/go-netrc/netrc
 # github.com/bombsimon/wsl/v3 v3.1.0
 github.com/bombsimon/wsl/v3
-# github.com/bufbuild/buf v0.32.0
+# github.com/bufbuild/buf v0.32.1
 ## explicit
 github.com/bufbuild/buf/cmd/buf
 github.com/bufbuild/buf/internal/buf/bufanalysis
@@ -422,7 +422,7 @@ github.com/jcmturner/gofork/encoding/asn1
 github.com/jcmturner/gofork/x/crypto/pbkdf2
 # github.com/jgautheron/goconst v0.0.0-20201117150253-ccae5bf973f3
 github.com/jgautheron/goconst
-# github.com/jhump/protoreflect v1.7.1-0.20200924151349-0050302ca4f8
+# github.com/jhump/protoreflect v1.8.1
 github.com/jhump/protoreflect/codec
 github.com/jhump/protoreflect/desc
 github.com/jhump/protoreflect/desc/internal
@@ -728,7 +728,7 @@ golang.org/x/net/trace
 # golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20201202213521-69691e467435
+# golang.org/x/sys v0.0.0-20201207223542-d4d67f95c62d
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -813,7 +813,7 @@ golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497
+# google.golang.org/genproto v0.0.0-20201210142538-e3217bee35cc
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/protobuf/api
 google.golang.org/genproto/protobuf/field_mask
