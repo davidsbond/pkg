@@ -19,6 +19,8 @@ import (
 // Once connected, migrations are performed. When the test is finished, the database
 // will be migrated down again.
 func WithSQLiteInstance(t *testing.T, migrations *database.MigrationSource) *sql.DB {
+	t.Helper()
+
 	const url = "test.db"
 
 	db, err := sqlite.Open(url, migrations)
@@ -43,6 +45,8 @@ func WithSQLiteInstance(t *testing.T, migrations *database.MigrationSource) *sql
 // database configured by the environment. Once connected, migrations are performed. When the
 // test is finished, the database will be migrated down again.
 func WithPostgresInstance(t *testing.T, migrations *database.MigrationSource) *sql.DB {
+	t.Helper()
+
 	pgHost := os.Getenv("POSTGRES_HOST")
 	pgPort := os.Getenv("POSTGRES_PORT")
 	pgUser := os.Getenv("POSTGRES_USER")
@@ -93,6 +97,7 @@ type (
 
 // Matches returns a generic gomock.Matcher implementation for a value.
 func Matches(t *testing.T, exp interface{}) gomock.Matcher {
+	t.Helper()
 	return &Matcher{
 		t:        t,
 		expected: exp,

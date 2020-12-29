@@ -16,6 +16,10 @@ github.com/OpenPeeDeeP/depguard
 github.com/Shopify/sarama
 # github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da
 github.com/armon/go-metrics
+# github.com/ashanbrown/forbidigo v1.0.0
+github.com/ashanbrown/forbidigo/forbidigo
+# github.com/ashanbrown/makezero v0.0.0-20201205152432-7b7cdbb3025a
+github.com/ashanbrown/makezero/makezero
 # github.com/aws/aws-sdk-go v1.36.1
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/arn
@@ -153,11 +157,11 @@ github.com/cespare/xxhash
 github.com/cespare/xxhash/v2
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/daixiang0/gci v0.2.4
+# github.com/daixiang0/gci v0.2.7
 github.com/daixiang0/gci/pkg/gci
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/denis-tingajkin/go-header v0.3.1
+# github.com/denis-tingajkin/go-header v0.4.2
 github.com/denis-tingajkin/go-header
 # github.com/dgraph-io/badger/v2 v2.2007.2
 ## explicit
@@ -289,7 +293,7 @@ github.com/golangci/gocyclo/pkg/gocyclo
 # github.com/golangci/gofmt v0.0.0-20190930125516-244bba706f1a
 github.com/golangci/gofmt/gofmt
 github.com/golangci/gofmt/goimports
-# github.com/golangci/golangci-lint v1.33.0
+# github.com/golangci/golangci-lint v1.34.1
 ## explicit
 github.com/golangci/golangci-lint/cmd/golangci-lint
 github.com/golangci/golangci-lint/internal/cache
@@ -349,9 +353,9 @@ github.com/gorilla/handlers
 # github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux
-# github.com/gostaticanalysis/analysisutil v0.1.0
+# github.com/gostaticanalysis/analysisutil v0.4.1
 github.com/gostaticanalysis/analysisutil
-# github.com/gostaticanalysis/comment v1.3.0
+# github.com/gostaticanalysis/comment v1.4.1
 github.com/gostaticanalysis/comment
 github.com/gostaticanalysis/comment/passes/commentmap
 # github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
@@ -450,6 +454,8 @@ github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/pgzip v1.2.5
 github.com/klauspost/pgzip
+# github.com/kulti/thelper v0.1.0
+github.com/kulti/thelper/pkg/analyzer
 # github.com/kunwardeep/paralleltest v1.0.2
 github.com/kunwardeep/paralleltest/pkg/paralleltest
 # github.com/kyoh86/exportloopref v0.1.8
@@ -528,7 +534,7 @@ github.com/pkg/errors
 github.com/pkg/profile
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/polyfloyd/go-errorlint v0.0.0-20201006195004-351e25ade6e3
+# github.com/polyfloyd/go-errorlint v0.0.0-20201127212506-19bd8db6546f
 github.com/polyfloyd/go-errorlint/errorlint
 # github.com/prometheus/client_golang v1.9.0
 ## explicit
@@ -557,7 +563,7 @@ github.com/quasilyte/regex/syntax
 github.com/rcrowley/go-metrics
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
-# github.com/ryancurrah/gomodguard v1.1.0
+# github.com/ryancurrah/gomodguard v1.2.0
 github.com/ryancurrah/gomodguard
 # github.com/ryanrolds/sqlclosecheck v0.3.0
 github.com/ryanrolds/sqlclosecheck/pkg/analyzer
@@ -609,13 +615,13 @@ github.com/stretchr/testify/mock
 github.com/subosito/gotenv
 # github.com/tdakkota/asciicheck v0.0.0-20200416190851-d7f85be797a2
 github.com/tdakkota/asciicheck
-# github.com/tetafro/godot v1.3.0
+# github.com/tetafro/godot v1.3.2
 github.com/tetafro/godot
 # github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e
 github.com/timakin/bodyclose/passes/bodyclose
 # github.com/tomarrell/wrapcheck v0.0.0-20200807122107-df9e8bcb914d
 github.com/tomarrell/wrapcheck/wrapcheck
-# github.com/tommy-muehle/go-mnd v1.3.1-0.20200224220436-e6f9a994e8fa
+# github.com/tommy-muehle/go-mnd v1.3.1-0.20201008215730-16041ac3fe65
 github.com/tommy-muehle/go-mnd
 github.com/tommy-muehle/go-mnd/checks
 github.com/tommy-muehle/go-mnd/config
@@ -956,7 +962,7 @@ gopkg.in/jcmturner/gokrb5.v7/types
 # gopkg.in/jcmturner/rpc.v1 v1.1.0
 gopkg.in/jcmturner/rpc.v1/mstypes
 gopkg.in/jcmturner/rpc.v1/ndr
-# gopkg.in/yaml.v2 v2.3.0
+# gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 gopkg.in/yaml.v3
@@ -989,7 +995,7 @@ honnef.co/go/tools/staticcheck
 honnef.co/go/tools/stylecheck
 honnef.co/go/tools/unused
 honnef.co/go/tools/version
-# mvdan.cc/gofumpt v0.0.0-20201027171050-85d5401eb0f6
+# mvdan.cc/gofumpt v0.0.0-20201129102820-5c11c50e9475
 ## explicit
 mvdan.cc/gofumpt/format
 mvdan.cc/gofumpt/gofumports
