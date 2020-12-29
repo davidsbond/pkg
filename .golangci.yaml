@@ -22,6 +22,7 @@ linters:
     - bodyclose
     - exhaustivestruct
     - wrapcheck
+    - forbidigo
 
 issues:
   exclude-use-default: false
