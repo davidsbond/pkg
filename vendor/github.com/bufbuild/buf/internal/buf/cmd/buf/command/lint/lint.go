@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,13 +51,17 @@ func NewCommand(
 	name string,
 	builder appflag.Builder,
 	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
+	deprecated string,
+	hidden bool,
 ) *appcmd.Command {
 	flags := newFlags()
 	return &appcmd.Command{
-		Use:   name + " <input>",
-		Short: "Check that the input location passes lint checks.",
-		Long:  bufcli.GetInputLong(`the source, module, or image to lint`),
-		Args:  cobra.MaximumNArgs(1),
+		Use:        name + " <input>",
+		Short:      "Check that the input location passes lint checks.",
+		Long:       bufcli.GetInputLong(`the source, module, or image to lint`),
+		Args:       cobra.MaximumNArgs(1),
+		Deprecated: deprecated,
+		Hidden:     hidden,
 		Run: builder.NewRunFunc(
 			func(ctx context.Context, container appflag.Container) error {
 				return run(ctx, container, flags, moduleResolverReaderProvider)

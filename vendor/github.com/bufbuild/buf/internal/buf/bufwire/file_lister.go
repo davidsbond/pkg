@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -91,7 +91,12 @@ func (e *fileLister) ListFiles(
 		defer func() {
 			retErr = multierr.Append(retErr, readBucketCloser.Close())
 		}()
-		config, err := bufconfig.ReadConfig(ctx, e.configProvider, readBucketCloser, configOverride)
+		config, err := bufconfig.ReadConfig(
+			ctx,
+			e.configProvider,
+			readBucketCloser,
+			bufconfig.ReadConfigWithOverride(configOverride),
+		)
 		if err != nil {
 			return nil, err
 		}

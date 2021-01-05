@@ -73,7 +73,7 @@ github.com/beorn7/perks/quantile
 github.com/bgentry/go-netrc/netrc
 # github.com/bombsimon/wsl/v3 v3.1.0
 github.com/bombsimon/wsl/v3
-# github.com/bufbuild/buf v0.33.0
+# github.com/bufbuild/buf v0.34.0
 ## explicit
 github.com/bufbuild/buf/cmd/buf
 github.com/bufbuild/buf/internal/buf/bufanalysis
@@ -96,20 +96,22 @@ github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimagebuild
 github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimageutil
 github.com/bufbuild/buf/internal/buf/bufcore/bufmodule
 github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/bufmodulebuild
+github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/internal
 github.com/bufbuild/buf/internal/buf/bufcore/internal/bufcorevalidate
 github.com/bufbuild/buf/internal/buf/buffetch
 github.com/bufbuild/buf/internal/buf/buffetch/internal
 github.com/bufbuild/buf/internal/buf/bufgen
 github.com/bufbuild/buf/internal/buf/bufwire
 github.com/bufbuild/buf/internal/buf/cmd/buf
+github.com/bufbuild/buf/internal/buf/cmd/buf/command/breaking
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/build
-github.com/bufbuild/buf/internal/buf/cmd/buf/command/check/breaking
-github.com/bufbuild/buf/internal/buf/cmd/buf/command/check/internal
-github.com/bufbuild/buf/internal/buf/cmd/buf/command/check/lint
-github.com/bufbuild/buf/internal/buf/cmd/buf/command/check/lsbreakingcheckers
-github.com/bufbuild/buf/internal/buf/cmd/buf/command/check/lslintcheckers
+github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configinit
+github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configlsbreakingrules
+github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configlslintrules
+github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/internal
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/convert
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/generate
+github.com/bufbuild/buf/internal/buf/cmd/buf/command/lint
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/lsfiles
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/protoc
 github.com/bufbuild/buf/internal/gen/data/wkt
@@ -130,6 +132,7 @@ github.com/bufbuild/buf/internal/pkg/git
 github.com/bufbuild/buf/internal/pkg/httpauth
 github.com/bufbuild/buf/internal/pkg/interrupt
 github.com/bufbuild/buf/internal/pkg/ioutilextended
+github.com/bufbuild/buf/internal/pkg/netextended
 github.com/bufbuild/buf/internal/pkg/netrc
 github.com/bufbuild/buf/internal/pkg/normalpath
 github.com/bufbuild/buf/internal/pkg/observability
@@ -137,6 +140,7 @@ github.com/bufbuild/buf/internal/pkg/observability/observabilityzap
 github.com/bufbuild/buf/internal/pkg/protodescriptor
 github.com/bufbuild/buf/internal/pkg/protoencoding
 github.com/bufbuild/buf/internal/pkg/protosource
+github.com/bufbuild/buf/internal/pkg/prototime
 github.com/bufbuild/buf/internal/pkg/protoversion
 github.com/bufbuild/buf/internal/pkg/storage
 github.com/bufbuild/buf/internal/pkg/storage/storagearchive
@@ -146,7 +150,7 @@ github.com/bufbuild/buf/internal/pkg/storage/storageutil
 github.com/bufbuild/buf/internal/pkg/stringutil
 github.com/bufbuild/buf/internal/pkg/thread
 github.com/bufbuild/buf/internal/pkg/tmp
-github.com/bufbuild/buf/internal/pkg/uuid
+github.com/bufbuild/buf/internal/pkg/uuidutil
 github.com/bufbuild/buf/internal/pkg/zaputil
 # github.com/cenkalti/backoff v2.2.1+incompatible
 ## explicit
@@ -237,7 +241,7 @@ github.com/gobwas/glob/util/runes
 github.com/gobwas/glob/util/strings
 # github.com/gofrs/flock v0.8.0
 github.com/gofrs/flock
-# github.com/gofrs/uuid v3.4.0+incompatible
+# github.com/gofrs/uuid v4.0.0+incompatible
 ## explicit
 github.com/gofrs/uuid
 # github.com/golang-migrate/migrate/v4 v4.14.1
@@ -444,7 +448,7 @@ github.com/jmespath/go-jmespath
 # github.com/kisielk/gotool v1.0.0
 github.com/kisielk/gotool
 github.com/kisielk/gotool/internal/load
-# github.com/klauspost/compress v1.11.3
+# github.com/klauspost/compress v1.11.4
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
@@ -824,7 +828,7 @@ golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/genproto v0.0.0-20201211151036-40ec1c210f7a
+# google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/protobuf/api
 google.golang.org/genproto/protobuf/field_mask
@@ -877,7 +881,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.25.1-0.20201020201750-d3470999428b
+# google.golang.org/protobuf v1.25.1-0.20201208041424-160c7477e0e8
 ## explicit
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
 google.golang.org/protobuf/compiler/protogen

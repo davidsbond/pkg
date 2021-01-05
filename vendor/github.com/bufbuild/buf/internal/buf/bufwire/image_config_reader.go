@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -169,7 +169,12 @@ func (i *imageConfigReader) getImageImageConfig(
 	if err != nil {
 		return nil, err
 	}
-	config, err := bufconfig.ReadConfig(ctx, i.configProvider, readWriteBucket, configOverride)
+	config, err := bufconfig.ReadConfig(
+		ctx,
+		i.configProvider,
+		readWriteBucket,
+		bufconfig.ReadConfigWithOverride(configOverride),
+	)
 	if err != nil {
 		return nil, err
 	}

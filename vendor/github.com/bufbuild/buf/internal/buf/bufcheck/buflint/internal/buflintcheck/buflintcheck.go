@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 // Package buflintcheck impelements the check functions.
 //
-// These are used by buflintbuild to create CheckerBuilders.
+// These are used by buflintbuild to create RuleBuilders.
 package buflintcheck
 
 import (

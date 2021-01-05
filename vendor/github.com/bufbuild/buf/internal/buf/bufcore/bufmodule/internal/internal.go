@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package uuid
+package internal
 
-import "github.com/gofrs/uuid"
+import "errors"
 
-// New returns a new random UUIDv4, as a string.
-func New() (uuid.UUID, error) {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return uuid.Nil, err
-	}
-	return id, nil
-}
-
-// Validate determines if the given UUID string is valid.
-func Validate(u string) error {
-	_, err := uuid.FromString(u)
-	return err
-}
+// ErrNoTargetFiles is the error returned if there are no target files found.
+var ErrNoTargetFiles = errors.New("no .proto target files found")

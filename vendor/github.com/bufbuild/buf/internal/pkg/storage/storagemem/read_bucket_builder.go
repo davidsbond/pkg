@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 
 	"github.com/bufbuild/buf/internal/pkg/normalpath"
 	"github.com/bufbuild/buf/internal/pkg/storage"
+	"github.com/bufbuild/buf/internal/pkg/storage/storageutil"
 )
 
 type readBucketBuilder struct {
@@ -61,6 +62,22 @@ func (b *readBucketBuilder) Delete(ctx context.Context, path string) error {
 	}
 	delete(b.pathToData, path)
 	delete(b.pathToExternalPath, path)
+	return nil
+}
+
+func (b *readBucketBuilder) DeleteAll(ctx context.Context, prefix string) error {
+	prefix, err := storageutil.ValidatePrefix(prefix)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	for path := range b.pathToData {
+		if normalpath.EqualsOrContainsPath(prefix, path, normalpath.Relative) {
+			delete(b.pathToData, path)
+			delete(b.pathToExternalPath, path)
+		}
+	}
 	return nil
 }
 

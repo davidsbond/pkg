@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,6 @@ func newNopModuleResolver() *nopModuleResolver {
 	return &nopModuleResolver{}
 }
 
-func (*nopModuleResolver) ResolveModule(ctx context.Context, moduleName ModuleName) (ResolvedModuleName, error) {
-	return nil, storage.NewErrNotExist(moduleName.String())
+func (*nopModuleResolver) GetModulePin(_ context.Context, moduleReference ModuleReference) (ModulePin, error) {
+	return nil, storage.NewErrNotExist(moduleReference.String())
 }
