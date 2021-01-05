@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 
 	"github.com/bufbuild/buf/internal/pkg/interrupt"
-	"github.com/bufbuild/buf/internal/pkg/uuid"
+	"github.com/bufbuild/buf/internal/pkg/uuidutil"
 	"go.uber.org/multierr"
 )
 
@@ -44,7 +44,7 @@ type File interface {
 //
 // Usage of this function requires eng approval - ask before using.
 func NewFileWithData(data []byte) (File, error) {
-	id, err := uuid.New()
+	id, err := uuidutil.New()
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func NewDir(options ...DirOption) (Dir, error) {
 	for _, option := range options {
 		option(dirOptions)
 	}
-	id, err := uuid.New()
+	id, err := uuidutil.New()
 	if err != nil {
 		return nil, err
 	}

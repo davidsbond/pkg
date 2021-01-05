@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -316,28 +316,11 @@ func (r *reader) getModule(
 	if r.moduleResolver == nil {
 		return nil, errors.New("module resolver is nil")
 	}
-	moduleName := moduleRef.ModuleName()
-	var resolvedModuleName bufmodule.ResolvedModuleName
-	if moduleName.Digest() == "" {
-		var err error
-		resolvedModuleName, err = r.moduleResolver.ResolveModule(ctx, moduleName)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		var err error
-		resolvedModuleName, err = bufmodule.NewResolvedModuleName(
-			moduleName.Remote(),
-			moduleName.Owner(),
-			moduleName.Repository(),
-			moduleName.Track(),
-			moduleName.Digest(),
-		)
-		if err != nil {
-			return nil, err
-		}
+	modulePin, err := r.moduleResolver.GetModulePin(ctx, moduleRef.ModuleReference())
+	if err != nil {
+		return nil, err
 	}
-	return r.moduleReader.GetModule(ctx, resolvedModuleName)
+	return r.moduleReader.GetModule(ctx, modulePin)
 }
 
 func (r *reader) getFileReadCloserAndSize(

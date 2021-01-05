@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,11 +59,11 @@ func (m *moduleFileSet) AllFileInfos(ctx context.Context) ([]bufcore.FileInfo, e
 	}); err != nil {
 		return nil, err
 	}
-	sortFileInfos(fileInfos)
+	bufcore.SortFileInfos(fileInfos)
 	return fileInfos, nil
 }
 
-func (m *moduleFileSet) GetFile(ctx context.Context, path string) (ModuleFile, error) {
+func (m *moduleFileSet) GetModuleFile(ctx context.Context, path string) (ModuleFile, error) {
 	// super overkill but ok
 	if err := validateModuleFilePath(path); err != nil {
 		return nil, err

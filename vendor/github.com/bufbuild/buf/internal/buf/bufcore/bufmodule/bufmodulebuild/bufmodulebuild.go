@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -137,9 +137,8 @@ type Config struct {
 	// The excludes in this map will be relative to the root they map to!
 	//
 	// If RootToExcludes is empty, the default is "." with no excludes.
-	RootToExcludes map[string][]string
-	// Resolved or unresolved
-	Deps []bufmodule.ModuleName
+	RootToExcludes             map[string][]string
+	DependencyModuleReferences []bufmodule.ModuleReference
 }
 
 // NewConfigV1Beta1 returns a new, validated Config for the ExternalConfig.

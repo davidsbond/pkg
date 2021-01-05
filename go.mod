@@ -4,12 +4,12 @@ go 1.15
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.0.0 // indirect
-	github.com/bufbuild/buf v0.33.0
+	github.com/bufbuild/buf v0.34.0
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.9.0
 	github.com/go-playground/validator/v10 v10.4.1
-	github.com/gofrs/uuid v3.4.0+incompatible
+	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.3
@@ -40,6 +40,6 @@ require (
 	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	google.golang.org/grpc v1.34.0
-	google.golang.org/protobuf v1.25.1-0.20201020201750-d3470999428b
+	google.golang.org/protobuf v1.25.1-0.20201208041424-160c7477e0e8
 	mvdan.cc/gofumpt v0.0.0-20201129102820-5c11c50e9475
 )

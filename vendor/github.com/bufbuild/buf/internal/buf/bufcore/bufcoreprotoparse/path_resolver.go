@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ func newParserAccessorHandler(
 }
 
 func (p *parserAccessorHandler) Open(path string) (_ io.ReadCloser, retErr error) {
-	moduleFile, moduleErr := p.module.GetFile(p.ctx, path)
+	moduleFile, moduleErr := p.module.GetModuleFile(p.ctx, path)
 	if moduleErr != nil {
 		if !storage.IsNotExist(moduleErr) {
 			return nil, moduleErr

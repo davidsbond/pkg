@@ -1,4 +1,4 @@
-// Copyright 2020 Buf Technologies, Inc.
+// Copyright 2020-2021 Buf Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package bufcore
 
 import (
+	"sort"
+
 	"github.com/bufbuild/buf/internal/pkg/storage"
 )
 
@@ -58,4 +60,14 @@ func NewFileInfo(path string, externalPath string, isImport bool) (FileInfo, err
 // The same rules apply to ObjectInfos for paths as FileInfos so we do not need to validate.
 func NewFileInfoForObjectInfo(objectInfo storage.ObjectInfo, isImport bool) FileInfo {
 	return newFileInfoForObjectInfo(objectInfo, isImport)
+}
+
+// SortFileInfos sorts the FileInfos.
+func SortFileInfos(fileInfos []FileInfo) {
+	sort.Slice(
+		fileInfos,
+		func(i int, j int) bool {
+			return fileInfos[i].Path() < fileInfos[j].Path()
+		},
+	)
 }
