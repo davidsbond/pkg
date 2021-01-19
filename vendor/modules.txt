@@ -73,7 +73,7 @@ github.com/beorn7/perks/quantile
 github.com/bgentry/go-netrc/netrc
 # github.com/bombsimon/wsl/v3 v3.1.0
 github.com/bombsimon/wsl/v3
-# github.com/bufbuild/buf v0.35.1
+# github.com/bufbuild/buf v0.36.0
 ## explicit
 github.com/bufbuild/buf/cmd/buf
 github.com/bufbuild/buf/internal/buf/bufanalysis
@@ -115,8 +115,8 @@ github.com/bufbuild/buf/internal/buf/cmd/buf/command/lint
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/lsfiles
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/protoc
 github.com/bufbuild/buf/internal/gen/data/wkt
-github.com/bufbuild/buf/internal/gen/proto/go/buf/image/v1
-github.com/bufbuild/buf/internal/gen/proto/go/buf/module/v1
+github.com/bufbuild/buf/internal/gen/proto/go/buf/alpha/image/v1
+github.com/bufbuild/buf/internal/gen/proto/go/buf/alpha/module/v1alpha1
 github.com/bufbuild/buf/internal/pkg/app
 github.com/bufbuild/buf/internal/pkg/app/appcmd
 github.com/bufbuild/buf/internal/pkg/app/appflag
@@ -448,7 +448,7 @@ github.com/jmespath/go-jmespath
 # github.com/kisielk/gotool v1.0.0
 github.com/kisielk/gotool
 github.com/kisielk/gotool/internal/load
-# github.com/klauspost/compress v1.11.6
+# github.com/klauspost/compress v1.11.7
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
