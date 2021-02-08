@@ -35,7 +35,7 @@ require (
 	github.com/unrolled/secure v1.0.8
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/automaxprocs v1.4.0
-	gocloud.dev v0.21.0
+	gocloud.dev v0.22.0
 	gocloud.dev/pubsub/kafkapubsub v0.21.0
 	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
