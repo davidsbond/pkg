@@ -30,10 +30,10 @@ import (
 )
 
 const (
-	ownerMinLength      = 3
-	ownerMaxLength      = 64
+	ownerMinLength      = 4
+	ownerMaxLength      = 32
 	repositoryMinLength = 2
-	repositoryMaxLength = 64
+	repositoryMaxLength = 32
 	branchMinLength     = 2
 	branchMaxLength     = 64
 	// 32MB
@@ -193,6 +193,9 @@ func ValidateBranch(branch string) error {
 			return fmt.Errorf("repository branch %q must only contain lowercase letters, digits, periods (.), or hyphens (-)", branch)
 		}
 	}
+	if err := uuidutil.ValidateDashless(branch); err == nil {
+		return fmt.Errorf("repository branch %q must not be parseable as a valid commit", branch)
+	}
 	return nil
 }
 
@@ -243,6 +246,19 @@ func ValidateModuleMatchesDigest(ctx context.Context, module Module, modulePin M
 	}
 	if digest != modulePin.Digest() {
 		return fmt.Errorf("mismatched module digest for %q: expected: %q got: %q", modulePin.IdentityString(), modulePin.Digest(), digest)
+	}
+	return nil
+}
+
+func validateModuleOwner(moduleOwner ModuleOwner) error {
+	if moduleOwner == nil {
+		return errors.New("module owner is required")
+	}
+	if err := validateRemote(moduleOwner.Remote()); err != nil {
+		return err
+	}
+	if err := ValidateOwner(moduleOwner.Owner(), "owner"); err != nil {
+		return err
 	}
 	return nil
 }

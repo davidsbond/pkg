@@ -118,15 +118,17 @@ func (m *moduleReference) Commit() string {
 }
 
 func (m *moduleReference) String() string {
-	if m.branch != "" {
-		return m.remote + "/" + m.owner + "/" + m.repository + ":" + m.branch
+	ref := m.branch
+	if ref == "" {
+		ref = m.commit
 	}
-	return m.remote + "/" + m.owner + "/" + m.repository + "@" + m.commit
+	return m.remote + "/" + m.owner + "/" + m.repository + ":" + ref
 }
 
 func (m *moduleReference) IdentityString() string {
 	return m.remote + "/" + m.owner + "/" + m.repository
 }
 
+func (*moduleReference) isModuleOwner()     {}
 func (*moduleReference) isModuleIdentity()  {}
 func (*moduleReference) isModuleReference() {}

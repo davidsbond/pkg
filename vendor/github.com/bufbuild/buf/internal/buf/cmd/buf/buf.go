@@ -19,9 +19,21 @@ import (
 	"time"
 
 	"github.com/bufbuild/buf/internal/buf/bufcli"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/mod/modexport"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/mod/modinit"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/mod/modupdate"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/push"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/branch/branchcreate"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/branch/branchlist"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/organization/organizationcreate"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/organization/organizationdelete"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/organization/organizationget"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/repository/repositorycreate"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/repository/repositorydelete"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/repository/repositoryget"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/repository/repositorylist"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/breaking"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/build"
-	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configinit"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configlsbreakingrules"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configlslintrules"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/convert"
@@ -34,8 +46,6 @@ import (
 )
 
 const (
-	// Version is the version of buf.
-	Version                 = "0.36.0"
 	checkDeprecationMessage = `"buf check" sub-commands are now all implemented with the top-level "buf lint" and "buf breaking" commands.
 We recommend migrating, however this command continues to work.
 See https://docs.buf.build/faq for more details.`
@@ -54,13 +64,15 @@ See https://docs.buf.build/faq for more details.`
 	imageDeprecationMessage = `"buf image" sub-commands are now all implemented under the top-level "buf build" command, use "buf build" instead.
 We recommend migrating, however this command continues to work.
 See https://docs.buf.build/faq for more details.`
+	betaConfigDeprecationMessage = `"buf beta config" has been moved to "buf beta mod".
+We recommend migrating, however this command continues to work.`
+	betaConfigInitDeprecationMessage = `"buf beta config init" has been moved to "buf beta mod init".
+We recommend migrating, however this command continues to work.`
 )
 
 // Main is the main.
 func Main(name string, options ...MainOption) {
-	mainOptions := &mainOptions{
-		moduleResolverReaderProvider: bufcli.NopModuleResolverReaderProvider{},
-	}
+	mainOptions := newMainOptions()
 	for _, option := range options {
 		option(mainOptions)
 	}
@@ -69,20 +81,12 @@ func Main(name string, options ...MainOption) {
 		NewRootCommand(
 			name,
 			mainOptions.rootCommandModifier,
-			mainOptions.moduleResolverReaderProvider,
 		),
 	)
 }
 
 // MainOption is an option for command construction.
 type MainOption func(*mainOptions)
-
-// WithModuleResolverAndReaderProvider returns a new MainOption that uses the given ModuleResolverReaderProvider.
-func WithModuleResolverAndReaderProvider(moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider) MainOption {
-	return func(options *mainOptions) {
-		options.moduleResolverReaderProvider = moduleResolverReaderProvider
-	}
-}
 
 // WithRootCommandModifier returns a new MainOption that modifies the root Command.
 func WithRootCommandModifier(rootCommandModifier func(*appcmd.Command, appflag.Builder, bufcli.ModuleResolverReaderProvider)) MainOption {
@@ -97,13 +101,13 @@ func WithRootCommandModifier(rootCommandModifier func(*appcmd.Command, appflag.B
 func NewRootCommand(
 	name string,
 	rootCommandModifier func(*appcmd.Command, appflag.Builder, bufcli.ModuleResolverReaderProvider),
-	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
 ) *appcmd.Command {
 	builder := appflag.NewBuilder(
 		name,
 		appflag.BuilderWithTimeout(120*time.Second),
 		appflag.BuilderWithTracing(),
 	)
+	moduleResolverReaderProvider := bufcli.NewRegistryModuleResolverReaderProvider()
 	rootCommand := &appcmd.Command{
 		Use: name,
 		SubCommands: []*appcmd.Command{
@@ -152,10 +156,12 @@ func NewRootCommand(
 				Short: "Beta commands. Unstable and will likely change.",
 				SubCommands: []*appcmd.Command{
 					{
-						Use:   "config",
-						Short: "Interact with the configuration of Buf.",
+						Use:        "config",
+						Short:      "Interact with the configuration of Buf.",
+						Deprecated: betaConfigDeprecationMessage,
+						Hidden:     true,
 						SubCommands: []*appcmd.Command{
-							configinit.NewCommand("init", builder),
+							modinit.NewCommand("init", builder, betaConfigInitDeprecationMessage, true),
 						},
 					},
 					{
@@ -170,6 +176,49 @@ func NewRootCommand(
 								imageDeprecationMessage,
 								true,
 							),
+						},
+					},
+					push.NewCommand("push", builder, moduleResolverReaderProvider),
+					{
+						Use:   "mod",
+						Short: "Configure and update buf modules.",
+						SubCommands: []*appcmd.Command{
+							modinit.NewCommand("init", builder, "", false),
+							modupdate.NewCommand("update", builder, moduleResolverReaderProvider),
+							modexport.NewCommand("export", builder, moduleResolverReaderProvider),
+						},
+					},
+					{
+						Use:   "registry",
+						Short: "Interact with the Buf Schema Registry.",
+						SubCommands: []*appcmd.Command{
+							{
+								Use:   "organization",
+								Short: "Organization commands.",
+								SubCommands: []*appcmd.Command{
+									organizationcreate.NewCommand("create", builder),
+									organizationget.NewCommand("get", builder),
+									organizationdelete.NewCommand("delete", builder),
+								},
+							},
+							{
+								Use:   "repository",
+								Short: "Repository commands.",
+								SubCommands: []*appcmd.Command{
+									repositorycreate.NewCommand("create", builder),
+									repositoryget.NewCommand("get", builder),
+									repositorylist.NewCommand("list", builder),
+									repositorydelete.NewCommand("delete", builder),
+								},
+							},
+							{
+								Use:   "branch",
+								Short: "Repository branch commands.",
+								SubCommands: []*appcmd.Command{
+									branchcreate.NewCommand("create", builder),
+									branchlist.NewCommand("list", builder),
+								},
+							},
 						},
 					},
 				},
@@ -200,7 +249,7 @@ See https://docs.buf.build/faq for more details.`,
 			},
 		},
 		BindPersistentFlags: builder.BindRoot,
-		Version:             Version,
+		Version:             bufcli.Version,
 	}
 	if rootCommandModifier != nil {
 		rootCommandModifier(rootCommand, builder, moduleResolverReaderProvider)
@@ -209,6 +258,9 @@ See https://docs.buf.build/faq for more details.`,
 }
 
 type mainOptions struct {
-	rootCommandModifier          func(*appcmd.Command, appflag.Builder, bufcli.ModuleResolverReaderProvider)
-	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider
+	rootCommandModifier func(*appcmd.Command, appflag.Builder, bufcli.ModuleResolverReaderProvider)
+}
+
+func newMainOptions() *mainOptions {
+	return &mainOptions{}
 }

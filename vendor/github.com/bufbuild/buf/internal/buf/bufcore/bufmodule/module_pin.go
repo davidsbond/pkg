@@ -119,12 +119,13 @@ func (m *modulePin) CreateTime() time.Time {
 }
 
 func (m *modulePin) String() string {
-	return m.remote + "/" + m.owner + "/" + m.repository + "@" + m.commit
+	return m.remote + "/" + m.owner + "/" + m.repository + ":" + m.commit
 }
 
 func (m *modulePin) IdentityString() string {
 	return m.remote + "/" + m.owner + "/" + m.repository
 }
 
+func (*modulePin) isModuleOwner()    {}
 func (*modulePin) isModuleIdentity() {}
 func (*modulePin) isModulePin()      {}
