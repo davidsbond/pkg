@@ -27,12 +27,16 @@ import (
 	"github.com/bufbuild/buf/internal/buf/bufcore"
 	modulev1alpha1 "github.com/bufbuild/buf/internal/gen/proto/go/buf/alpha/module/v1alpha1"
 	"github.com/bufbuild/buf/internal/pkg/storage"
+	"github.com/bufbuild/buf/internal/pkg/uuidutil"
 	"go.uber.org/multierr"
 )
 
 const (
 	// LockFilePath defines the path to the lock file, relative to the root of the module.
 	LockFilePath = "buf.lock"
+	// MainBranch is the name of the branch created for every repository.
+	// This is the default branch used if no branch or commit is specified.
+	MainBranch = "main"
 
 	b1DigestPrefix = "b1"
 )
@@ -45,14 +49,53 @@ type ModuleFile interface {
 	isModuleFile()
 }
 
+// ModuleOwner is a module owner.
+//
+// It just contains remote, owner.
+//
+// This is shared by ModuleIdentity.
+type ModuleOwner interface {
+	Remote() string
+	Owner() string
+
+	isModuleOwner()
+}
+
+// NewModuleOwner returns a new ModuleOwner.
+func NewModuleOwner(
+	remote string,
+	owner string,
+) (ModuleOwner, error) {
+	return newModuleOwner(remote, owner)
+}
+
+// ModuleOwnerForString returns a new ModuleOwner for the given string.
+//
+// This parses the path in the form remote/owner.
+func ModuleOwnerForString(path string) (ModuleOwner, error) {
+	slashSplit := strings.Split(path, "/")
+	if len(slashSplit) != 2 {
+		return nil, newInvalidModuleOwnerStringError(path)
+	}
+	remote := strings.TrimSpace(slashSplit[0])
+	if remote == "" {
+		return nil, newInvalidModuleIdentityStringError(path)
+	}
+	owner := strings.TrimSpace(slashSplit[1])
+	if owner == "" {
+		return nil, newInvalidModuleIdentityStringError(path)
+	}
+	return NewModuleOwner(remote, owner)
+}
+
 // ModuleIdentity is a module identity.
 //
 // It just contains remote, owner, repository.
 //
 // This is shared by ModuleReference and ModulePin.
 type ModuleIdentity interface {
-	Remote() string
-	Owner() string
+	ModuleOwner
+
 	Repository() string
 
 	// IdentityString is the string remote/owner/repository.
@@ -72,25 +115,13 @@ func NewModuleIdentity(
 
 // ModuleIdentityForString returns a new ModuleIdentity for the given string.
 //
-// This parses the path in the form remote/owner/repository{:branch,@commit}.
+// This parses the path in the form remote/owner/repository:{branch,commit}.
 //
 // TODO: we may want to add a special error if we detect / or @ as this may be a common mistake.
 func ModuleIdentityForString(path string) (ModuleIdentity, error) {
-	slashSplit := strings.Split(path, "/")
-	if len(slashSplit) != 3 {
-		return nil, newInvalidModuleIdentityStringError(path)
-	}
-	remote := strings.TrimSpace(slashSplit[0])
-	if remote == "" {
-		return nil, newInvalidModuleIdentityStringError(path)
-	}
-	owner := strings.TrimSpace(slashSplit[1])
-	if owner == "" {
-		return nil, newInvalidModuleIdentityStringError(path)
-	}
-	repository := strings.TrimSpace(slashSplit[2])
-	if repository == "" {
-		return nil, newInvalidModuleIdentityStringError(path)
+	remote, owner, repository, err := parseModuleIdentityComponents(path)
+	if err != nil {
+		return nil, err
 	}
 	return NewModuleIdentity(remote, owner, repository)
 }
@@ -104,7 +135,7 @@ func ModuleIdentityForString(path string) (ModuleIdentity, error) {
 type ModuleReference interface {
 	ModuleIdentity
 
-	// Prints either remote/owner/repository:branch or remote/owner/repository@commit
+	// Prints either remote/owner/repository:{branch,commit}
 	fmt.Stringer
 
 	// only one of these will be set
@@ -174,48 +205,94 @@ func NewProtoModuleReferencesForModuleReferences(moduleReferences ...ModuleRefer
 }
 
 // ModuleReferenceForString returns a new ModuleReference for the given string.
+// If a branch or commit is not provided, the "main" branch is used.
 //
-// This parses the path in the form remote/owner/repository{:branch,@commit}.
-func ModuleReferenceForString(path string) (ModuleReference, error) {
-	slashSplit := strings.Split(path, "/")
-	if len(slashSplit) != 3 {
+// This parses the path in the form remote/owner/repository{:branch,:commit}.
+func ModuleReferenceForString(path string, options ...ModuleReferenceForStringOption) (ModuleReference, error) {
+	moduleReferenceForStringOptions := newModuleReferenceForStringOptions()
+	for _, option := range options {
+		option(moduleReferenceForStringOptions)
+	}
+	remote, owner, repository, ref, err := parseModuleReferenceComponents(path)
+	if err != nil {
+		return nil, err
+	}
+	if ref == "" && moduleReferenceForStringOptions.requireBranch {
+		return nil, fmt.Errorf("a branch is required in module reference path %q", path)
+	}
+	if ref == "" {
+		// Default to the main branch if a ':' separator was not specified.
+		return NewBranchModuleReference(remote, owner, repository, MainBranch)
+	}
+	if _, err := uuidutil.FromDashless(ref); err == nil {
+		return NewCommitModuleReference(remote, owner, repository, ref)
+	}
+	return NewBranchModuleReference(remote, owner, repository, ref)
+}
+
+// ModuleReferenceForStringOption is an option for ModuleReferenceForString.
+type ModuleReferenceForStringOption func(*moduleReferenceForStringOptions)
+
+// ModuleReferenceForStringRequireBranch returns a new ModuleReferenceForStringOption that
+// requires that a branch was specified in the module reference path.
+//
+// The default is to use MainBranch if a branch is not specified.
+func ModuleReferenceForStringRequireBranch() ModuleReferenceForStringOption {
+	return func(moduleReferenceForStringOptions *moduleReferenceForStringOptions) {
+		moduleReferenceForStringOptions.requireBranch = true
+	}
+}
+
+// BranchModuleReferenceForString returns a new ModuleReference for the given string.
+// If a branch is not provided, the "main" branch is used.
+//
+// This parses the path in the form remote/owner/repository:branch.
+// If a commit is provided, an error is returned.
+func BranchModuleReferenceForString(path string, options ...BranchModuleReferenceForStringOption) (ModuleReference, error) {
+	branchModuleReferenceForStringOptions := newBranchModuleReferenceForStringOptions()
+	for _, option := range options {
+		option(branchModuleReferenceForStringOptions)
+	}
+	remote, owner, repository, ref, err := parseModuleReferenceComponents(path)
+	if err != nil {
+		return nil, err
+	}
+	if ref == "" && branchModuleReferenceForStringOptions.requireBranch {
+		return nil, fmt.Errorf("a branch is required in module reference path %q", path)
+	}
+	if ref == "" {
+		// Default to the main branch if a ':' separator was not specified.
+		return NewBranchModuleReference(remote, owner, repository, MainBranch)
+	}
+	return NewBranchModuleReference(remote, owner, repository, ref)
+}
+
+// BranchModuleReferenceForStringOption is an option for BranchModuleReferenceForString.
+type BranchModuleReferenceForStringOption func(*branchModuleReferenceForStringOptions)
+
+// BranchModuleReferenceForStringRequireBranch returns a new BranchModuleReferenceForStringOption that
+// requires that a branch was specified in the module reference path.
+//
+// The default is to use MainBranch if a branch is not specified.
+func BranchModuleReferenceForStringRequireBranch() BranchModuleReferenceForStringOption {
+	return func(branchModuleReferenceForStringOptions *branchModuleReferenceForStringOptions) {
+		branchModuleReferenceForStringOptions.requireBranch = true
+	}
+}
+
+// CommitModuleReferenceForString returns a new ModuleReference for the given string.
+//
+// This parses the path in the form remote/owner/repository:commit.
+// If a commit is not provided, an error is returned.
+func CommitModuleReferenceForString(path string) (ModuleReference, error) {
+	remote, owner, repository, ref, err := parseModuleReferenceComponents(path)
+	if err != nil {
+		return nil, err
+	}
+	if ref == "" {
 		return nil, newInvalidModuleReferenceStringError(path)
 	}
-	remote := strings.TrimSpace(slashSplit[0])
-	if remote == "" {
-		return nil, newInvalidModuleReferenceStringError(path)
-	}
-	owner := strings.TrimSpace(slashSplit[1])
-	if owner == "" {
-		return nil, newInvalidModuleReferenceStringError(path)
-	}
-	rest := strings.TrimSpace(slashSplit[2])
-	if rest == "" {
-		return nil, newInvalidModuleReferenceStringError(path)
-	}
-	switch branchSplit := strings.Split(rest, ":"); len(branchSplit) {
-	case 1:
-		switch commitSplit := strings.Split(rest, "@"); len(commitSplit) {
-		case 2:
-			repository := strings.TrimSpace(commitSplit[0])
-			commit := strings.TrimSpace(commitSplit[1])
-			if repository == "" || commit == "" {
-				return nil, newInvalidModuleReferenceStringError(path)
-			}
-			return NewCommitModuleReference(remote, owner, repository, commit)
-		default:
-			return nil, newInvalidModuleReferenceStringError(path)
-		}
-	case 2:
-		repository := strings.TrimSpace(branchSplit[0])
-		branch := strings.TrimSpace(branchSplit[1])
-		if repository == "" || branch == "" {
-			return nil, newInvalidModuleReferenceStringError(path)
-		}
-		return NewBranchModuleReference(remote, owner, repository, branch)
-	default:
-		return nil, newInvalidModuleReferenceStringError(path)
-	}
+	return NewCommitModuleReference(remote, owner, repository, ref)
 }
 
 // ModulePin is a module pin.
@@ -227,7 +304,7 @@ func ModuleReferenceForString(path string) (ModuleReference, error) {
 type ModulePin interface {
 	ModuleIdentity
 
-	// Prints remote/owner/repository@commit, which matches ModuleReference
+	// Prints remote/owner/repository:commit, which matches ModuleReference
 	fmt.Stringer
 
 	// all of these will be set
@@ -638,4 +715,62 @@ func SortModulePins(modulePins []ModulePin) {
 	sort.Slice(modulePins, func(i, j int) bool {
 		return modulePinLess(modulePins[i], modulePins[j])
 	})
+}
+
+// parseModuleReferenceComponents parses and returns the remote, owner, repository,
+// and ref (branch or commit) from the given path.
+func parseModuleReferenceComponents(path string) (remote string, owner string, repository string, ref string, err error) {
+	remote, owner, rest, err := parseModuleIdentityComponents(path)
+	if err != nil {
+		return "", "", "", "", newInvalidModuleReferenceStringError(path)
+	}
+	restSplit := strings.Split(rest, ":")
+	repository = strings.TrimSpace(restSplit[0])
+	if len(restSplit) == 1 {
+		return remote, owner, repository, "", nil
+	}
+	if len(restSplit) == 2 {
+		ref := strings.TrimSpace(restSplit[1])
+		if ref == "" {
+			return "", "", "", "", newInvalidModuleReferenceStringError(path)
+		}
+		return remote, owner, repository, ref, nil
+	}
+	return "", "", "", "", newInvalidModuleReferenceStringError(path)
+}
+
+func parseModuleIdentityComponents(path string) (remote string, owner string, repository string, err error) {
+	slashSplit := strings.Split(path, "/")
+	if len(slashSplit) != 3 {
+		return "", "", "", newInvalidModuleIdentityStringError(path)
+	}
+	remote = strings.TrimSpace(slashSplit[0])
+	if remote == "" {
+		return "", "", "", newInvalidModuleIdentityStringError(path)
+	}
+	owner = strings.TrimSpace(slashSplit[1])
+	if owner == "" {
+		return "", "", "", newInvalidModuleIdentityStringError(path)
+	}
+	repository = strings.TrimSpace(slashSplit[2])
+	if repository == "" {
+		return "", "", "", newInvalidModuleIdentityStringError(path)
+	}
+	return remote, owner, repository, nil
+}
+
+type moduleReferenceForStringOptions struct {
+	requireBranch bool
+}
+
+func newModuleReferenceForStringOptions() *moduleReferenceForStringOptions {
+	return &moduleReferenceForStringOptions{}
+}
+
+type branchModuleReferenceForStringOptions struct {
+	requireBranch bool
+}
+
+func newBranchModuleReferenceForStringOptions() *branchModuleReferenceForStringOptions {
+	return &branchModuleReferenceForStringOptions{}
 }
