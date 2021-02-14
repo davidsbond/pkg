@@ -26,7 +26,7 @@ install-tools:
 # Lints go source code
 lint:
 	golangci-lint run --enable-all
-	buf check lint
+	buf lint
 
 # Generates go source code
 generate:

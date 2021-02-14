@@ -2,6 +2,7 @@
 package testutil
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"pkg.dsb.dev/storage/database"
 	"pkg.dsb.dev/storage/database/postgres"
 	"pkg.dsb.dev/storage/database/sqlite"
+	"pkg.dsb.dev/storage/ftp"
 )
 
 // WithSQLiteInstance is a test helper function that creates an sqlite database.
@@ -84,6 +86,46 @@ func WithPostgresInstance(t *testing.T, migrations *database.MigrationSource) *s
 	})
 
 	return db
+}
+
+// WithFTPServer is a test helper function that creates a connection to an FTP
+// server configured by the environment.
+func WithFTPServer(t *testing.T) *ftp.Conn {
+	t.Helper()
+
+	ftpHost := os.Getenv("FTP_HOST")
+	ftpPort := os.Getenv("FTP_PORT")
+	ftpUser := os.Getenv("FTP_USER")
+	ftpPass := os.Getenv("FTP_PASSWORD")
+
+	if ftpHost == "" {
+		ftpHost = "localhost"
+	}
+
+	if ftpPort == "" {
+		ftpPort = "21"
+	}
+
+	if ftpUser == "" {
+		ftpUser = "ftp"
+	}
+
+	if ftpPass == "" {
+		ftpPass = "ftp"
+	}
+
+	url := fmt.Sprintf("%s:%s", ftpHost, ftpPort)
+	conn, err := ftp.Open(context.Background(), url, ftp.WithCredentials(ftpUser, ftpPass))
+	if err != nil {
+		assert.FailNow(t, err.Error())
+		return nil
+	}
+
+	t.Cleanup(func() {
+		assert.NoError(t, conn.Close())
+	})
+
+	return conn
 }
 
 type (

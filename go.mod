@@ -21,6 +21,7 @@ require (
 	github.com/hashicorp/memberlist v0.2.2
 	github.com/jackc/pgtype v1.6.2
 	github.com/jackc/pgx/v4 v4.10.1
+	github.com/jlaffaye/ftp v0.0.0-20201112195030-9aae4d151126
 	github.com/luna-duclos/instrumentedsql v1.1.3
 	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201015064105-f9d01e123f16
 	github.com/mattn/go-sqlite3 v1.14.6

@@ -481,6 +481,9 @@ github.com/jhump/protoreflect/internal/codec
 github.com/jingyugao/rowserrcheck/passes/rowserr
 # github.com/jirfag/go-printf-func-name v0.0.0-20191110105641-45db9963cdd3
 github.com/jirfag/go-printf-func-name/pkg/analyzer
+# github.com/jlaffaye/ftp v0.0.0-20201112195030-9aae4d151126
+## explicit
+github.com/jlaffaye/ftp
 # github.com/jmespath/go-jmespath v0.4.0
 github.com/jmespath/go-jmespath
 # github.com/kisielk/gotool v1.0.0
