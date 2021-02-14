@@ -16,6 +16,16 @@ jobs:
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
+      ftp:
+        image: stilliard/pure-ftpd
+        env:
+          FTP_USER_NAME: ftp
+          FTP_USER_PASS: ftp
+          FTP_USER_HOME: /home/ftp
+          FTP_PASSIVE_PORTS: 30000:30000
+        ports:
+          - 21:21
+          - 30000:30000
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -31,6 +41,10 @@ jobs:
             go-cache-refs/heads/master
       - name: Run tests
         env:
+          FTP_HOST: ftp
+          FTP_USER: ftp
+          FTP_PASSWORD: ftp
+          FTP_PORT: ${{ job.services.ftp.ports[21] }}
           POSTGRES_HOST: postgres
           POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
           POSTGRES_PASSWORD: postgres
