@@ -11,6 +11,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/jaeger-client-go"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"pkg.dsb.dev/closers"
 	"pkg.dsb.dev/event"
@@ -44,12 +45,12 @@ func TestReader_Read(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	assert.NoError(t, wr.Write(ctx, event.Event{
-		Payload: []byte("hello world"),
-	}))
+	payload := timestamppb.New(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+	expected := event.New(payload)
 
-	err := rd.Read(ctx, func(ctx context.Context, evt event.Event) error {
-		assert.EqualValues(t, []byte("hello world"), evt.Payload)
+	assert.NoError(t, wr.Write(ctx, expected))
+	err := rd.Read(ctx, func(ctx context.Context, actual event.Event) error {
+		assert.EqualValues(t, expected.ID, actual.ID)
 		cancel()
 		return nil
 	})
@@ -69,9 +70,10 @@ func TestEventTracing(t *testing.T) {
 	defer closers.Close(closer)
 	opentracing.SetGlobalTracer(tracer)
 
-	assert.NoError(t, wr.Write(ctx, event.Event{
-		Payload: []byte("hello world"),
-	}))
+	payload := timestamppb.New(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+	expected := event.New(payload)
+
+	assert.NoError(t, wr.Write(ctx, expected))
 
 	err := rd.Read(ctx, func(ctx context.Context, evt event.Event) error {
 		span := opentracing.SpanFromContext(ctx)

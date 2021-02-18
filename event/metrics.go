@@ -21,12 +21,12 @@ var (
 		Subsystem: subsystem,
 		Name:      "events_written",
 		Help:      "Total number of events written to the stream",
-	}, []string{"topic"})
+	}, []string{"type"})
 
 	eventsRead = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
 		Name:      "events_read",
 		Help:      "Total number of events read from the stream",
-	}, []string{"topic"})
+	}, []string{"type"})
 )

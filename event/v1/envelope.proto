@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "pkg.dsb.dev/event/v1;event";
+
+package event.v1;
+
+message Envelope {
+  // ID is a unique identifier for the event.
+  string id = 1;
+
+  // Timestamp represents the time at which an event was created.
+  google.protobuf.Timestamp timestamp = 2;
+
+  // AppliesAt indicates the time at which the event described in Payload happened. It does not always
+  // match Timestamp.
+  google.protobuf.Timestamp applies_at = 3;
+
+  // Payload contains the content of the event,
+  google.protobuf.Any payload = 4;
+
+  // Send contains metadata describing who produced the event.
+  Sender sender = 5;
+}
+
+message Sender {
+  // Application is the name of the application that created an event.
+  string application = 1;
+
+  // Metadata contains any metadata fields provided by the sender. This can include
+  // trace tokens or any other arbitrary data.
+  map<string, string> metadata = 2;
+}

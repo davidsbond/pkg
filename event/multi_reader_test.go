@@ -5,8 +5,10 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"pkg.dsb.dev/closers"
 	"pkg.dsb.dev/event"
@@ -14,6 +16,9 @@ import (
 
 func TestMultiReader_Read(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	payload := timestamppb.New(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+	expected := event.New(payload)
 
 	aWriter, err := event.NewWriter(ctx, "mem://a")
 	assert.NoError(t, err)
@@ -31,15 +36,9 @@ func TestMultiReader_Read(t *testing.T) {
 	assert.NoError(t, err)
 	defer closers.Close(rd)
 
-	assert.NoError(t, aWriter.Write(ctx, event.Event{
-		Payload: []byte("hello world"),
-	}))
-	assert.NoError(t, bWriter.Write(ctx, event.Event{
-		Payload: []byte("hello world"),
-	}))
-	assert.NoError(t, cWriter.Write(ctx, event.Event{
-		Payload: []byte("hello world"),
-	}))
+	assert.NoError(t, aWriter.Write(ctx, expected))
+	assert.NoError(t, bWriter.Write(ctx, expected))
+	assert.NoError(t, cWriter.Write(ctx, expected))
 
 	i := 0
 	mux := &sync.Mutex{}
@@ -47,7 +46,7 @@ func TestMultiReader_Read(t *testing.T) {
 		mux.Lock()
 		defer mux.Unlock()
 
-		assert.EqualValues(t, []byte("hello world"), evt.Payload)
+		assert.EqualValues(t, expected.ID, evt.ID)
 		i++
 		if i == 3 {
 			cancel()
