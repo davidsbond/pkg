@@ -1,5 +1,42 @@
 # 4d63.com/gochecknoglobals v0.0.0-20201008074935-acfc0b28355a
 4d63.com/gochecknoglobals/checknoglobals
+# cloud.google.com/go v0.72.0
+cloud.google.com/go/compute/metadata
+cloud.google.com/go/iam
+# cloud.google.com/go/pubsub v1.9.0
+cloud.google.com/go/pubsub/apiv1
+# github.com/Azure/azure-amqp-common-go/v3 v3.1.0
+github.com/Azure/azure-amqp-common-go/v3
+github.com/Azure/azure-amqp-common-go/v3/aad
+github.com/Azure/azure-amqp-common-go/v3/auth
+github.com/Azure/azure-amqp-common-go/v3/cbs
+github.com/Azure/azure-amqp-common-go/v3/conn
+github.com/Azure/azure-amqp-common-go/v3/internal
+github.com/Azure/azure-amqp-common-go/v3/internal/tracing
+github.com/Azure/azure-amqp-common-go/v3/rpc
+github.com/Azure/azure-amqp-common-go/v3/sas
+github.com/Azure/azure-amqp-common-go/v3/uuid
+# github.com/Azure/azure-service-bus-go v0.10.7
+github.com/Azure/azure-service-bus-go
+github.com/Azure/azure-service-bus-go/atom
+# github.com/Azure/go-amqp v0.13.1
+github.com/Azure/go-amqp
+github.com/Azure/go-amqp/internal/testconn
+# github.com/Azure/go-autorest v14.2.0+incompatible
+github.com/Azure/go-autorest
+# github.com/Azure/go-autorest/autorest v0.11.12
+github.com/Azure/go-autorest/autorest
+github.com/Azure/go-autorest/autorest/azure
+# github.com/Azure/go-autorest/autorest/adal v0.9.6
+github.com/Azure/go-autorest/autorest/adal
+# github.com/Azure/go-autorest/autorest/date v0.3.0
+github.com/Azure/go-autorest/autorest/date
+# github.com/Azure/go-autorest/autorest/to v0.4.0
+github.com/Azure/go-autorest/autorest/to
+# github.com/Azure/go-autorest/logger v0.2.0
+github.com/Azure/go-autorest/logger
+# github.com/Azure/go-autorest/tracing v0.6.0
+github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
 # github.com/DataDog/zstd v1.4.1
@@ -67,6 +104,8 @@ github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
 github.com/aws/aws-sdk-go/service/s3
 github.com/aws/aws-sdk-go/service/s3/s3iface
 github.com/aws/aws-sdk-go/service/s3/s3manager
+github.com/aws/aws-sdk-go/service/sns
+github.com/aws/aws-sdk-go/service/sqs
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
@@ -209,6 +248,8 @@ github.com/daixiang0/gci/pkg/gci
 github.com/davecgh/go-spew/spew
 # github.com/denis-tingajkin/go-header v0.4.2
 github.com/denis-tingajkin/go-header
+# github.com/devigned/tab v0.1.1
+github.com/devigned/tab
 # github.com/dgraph-io/badger/v2 v2.2007.2
 ## explicit
 github.com/dgraph-io/badger/v2
@@ -239,6 +280,8 @@ github.com/fatih/color
 github.com/fatih/structtag
 # github.com/felixge/httpsnoop v1.0.1
 github.com/felixge/httpsnoop
+# github.com/form3tech-oss/jwt-go v3.2.2+incompatible
+github.com/form3tech-oss/jwt-go
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/fzipp/gocyclo v0.3.1
@@ -564,6 +607,16 @@ github.com/moricho/tparallel/pkg/ssafunc
 github.com/moricho/tparallel/pkg/ssainstr
 # github.com/nakabonne/nestif v0.3.0
 github.com/nakabonne/nestif
+# github.com/nats-io/jwt v1.2.2
+github.com/nats-io/jwt
+# github.com/nats-io/nats.go v1.10.0
+github.com/nats-io/nats.go
+github.com/nats-io/nats.go/encoders/builtin
+github.com/nats-io/nats.go/util
+# github.com/nats-io/nkeys v0.2.0
+github.com/nats-io/nkeys
+# github.com/nats-io/nuid v1.0.1
+github.com/nats-io/nuid
 # github.com/nbutton23/zxcvbn-go v0.0.0-20201221231540-e56b841a3c88
 github.com/nbutton23/zxcvbn-go
 github.com/nbutton23/zxcvbn-go/adjacency
@@ -675,6 +728,8 @@ github.com/spf13/pflag
 github.com/spf13/viper
 # github.com/ssgreg/nlreturn/v2 v2.1.0
 github.com/ssgreg/nlreturn/v2/pkg/nlreturn
+# github.com/streadway/amqp v1.0.0
+github.com/streadway/amqp
 # github.com/stretchr/objx v0.2.0
 github.com/stretchr/objx
 # github.com/stretchr/testify v1.7.0
@@ -771,18 +826,29 @@ gocloud.dev/blob/fileblob
 gocloud.dev/blob/memblob
 gocloud.dev/blob/s3blob
 gocloud.dev/gcerrors
+gocloud.dev/gcp
 gocloud.dev/internal/escape
 gocloud.dev/internal/gcerr
 gocloud.dev/internal/oc
 gocloud.dev/internal/openurl
 gocloud.dev/internal/retry
+gocloud.dev/internal/useragent
 gocloud.dev/pubsub
+gocloud.dev/pubsub/awssnssqs
+gocloud.dev/pubsub/azuresb
 gocloud.dev/pubsub/batcher
 gocloud.dev/pubsub/driver
+gocloud.dev/pubsub/gcppubsub
 gocloud.dev/pubsub/mempubsub
 # gocloud.dev/pubsub/kafkapubsub v0.22.0
 ## explicit
 gocloud.dev/pubsub/kafkapubsub
+# gocloud.dev/pubsub/natspubsub v0.22.0
+## explicit
+gocloud.dev/pubsub/natspubsub
+# gocloud.dev/pubsub/rabbitpubsub v0.22.0
+## explicit
+gocloud.dev/pubsub/rabbitpubsub
 # golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
 ## explicit
 golang.org/x/crypto/acme
@@ -791,6 +857,8 @@ golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/md4
 golang.org/x/crypto/pbkdf2
+golang.org/x/crypto/pkcs12
+golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/crypto/sha3
 # golang.org/x/mod v0.4.0
 golang.org/x/mod/internal/lazyregexp
@@ -800,6 +868,7 @@ golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20210119194325-5f4716e94777
 golang.org/x/net/bpf
 golang.org/x/net/context
+golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
@@ -812,6 +881,12 @@ golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/proxy
 golang.org/x/net/trace
+# golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19
+golang.org/x/oauth2
+golang.org/x/oauth2/google
+golang.org/x/oauth2/internal
+golang.org/x/oauth2/jws
+golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 ## explicit
 golang.org/x/sync/errgroup
@@ -901,8 +976,34 @@ golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
+# google.golang.org/api v0.36.0
+google.golang.org/api/internal
+google.golang.org/api/internal/impersonate
+google.golang.org/api/iterator
+google.golang.org/api/option
+google.golang.org/api/option/internaloption
+google.golang.org/api/transport/cert
+google.golang.org/api/transport/grpc
+google.golang.org/api/transport/internal/dca
+# google.golang.org/appengine v1.6.7
+google.golang.org/appengine
+google.golang.org/appengine/internal
+google.golang.org/appengine/internal/app_identity
+google.golang.org/appengine/internal/base
+google.golang.org/appengine/internal/datastore
+google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/modules
+google.golang.org/appengine/internal/remote_api
+google.golang.org/appengine/internal/socket
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/socket
+google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20210207032614-bba0dbe2a9ea
+google.golang.org/genproto/googleapis/api/annotations
+google.golang.org/genproto/googleapis/iam/v1
+google.golang.org/genproto/googleapis/pubsub/v1
 google.golang.org/genproto/googleapis/rpc/status
+google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/protobuf/api
 google.golang.org/genproto/protobuf/field_mask
 google.golang.org/genproto/protobuf/ptype
@@ -914,12 +1015,23 @@ google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/base
+google.golang.org/grpc/balancer/grpclb
+google.golang.org/grpc/balancer/grpclb/grpc_lb_v1
 google.golang.org/grpc/balancer/grpclb/state
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/codes
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/alts
+google.golang.org/grpc/credentials/alts/internal
+google.golang.org/grpc/credentials/alts/internal/authinfo
+google.golang.org/grpc/credentials/alts/internal/conn
+google.golang.org/grpc/credentials/alts/internal/handshaker
+google.golang.org/grpc/credentials/alts/internal/handshaker/service
+google.golang.org/grpc/credentials/alts/internal/proto/grpc_gcp
+google.golang.org/grpc/credentials/google
+google.golang.org/grpc/credentials/oauth
 google.golang.org/grpc/encoding
 google.golang.org/grpc/encoding/proto
 google.golang.org/grpc/grpclog
@@ -1091,3 +1203,9 @@ mvdan.cc/interfacer/check
 mvdan.cc/lint
 # mvdan.cc/unparam v0.0.0-20200501210554-b37ab49443f7
 mvdan.cc/unparam/check
+# nhooyr.io/websocket v1.8.6
+nhooyr.io/websocket
+nhooyr.io/websocket/internal/bpool
+nhooyr.io/websocket/internal/errd
+nhooyr.io/websocket/internal/wsjs
+nhooyr.io/websocket/internal/xsync

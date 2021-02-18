@@ -2,7 +2,6 @@ package event
 
 import (
 	"context"
-	"net/url"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -15,44 +14,46 @@ type (
 	// The Writer type is used to write events to a single topic.
 	Writer struct {
 		topic *pubsub.Topic
-		name  string
 	}
 )
 
 // NewWriter creates a new instance of the Writer type that will write events to the configured
 // event stream provider identified using the given URL.
 func NewWriter(ctx context.Context, urlStr string) (*Writer, error) {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return nil, err
-	}
-
 	topic, err := pubsub.OpenTopic(ctx, urlStr)
-	return &Writer{topic: topic, name: u.Host}, err
+	return &Writer{topic: topic}, err
 }
 
-// Write an event to the stream.
+// Write an event to the stream. If the provided context.Context contains tracing information, it is added to
+// Event.Sender.Metadata so that tracing can occur across event readers/writers.
 func (w *Writer) Write(ctx context.Context, evt Event) error {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "event-write")
 	defer span.Finish()
 
-	span.SetTag("event.topic", w.name)
+	span.SetTag("event.type", evt.typeName())
 
-	// Include span metadata in event metadata.
 	md, err := tracing.SpanMetadata(span)
+	if err != nil {
+		return err
+	}
+	for k, v := range md {
+		evt.Sender.Metadata[k] = v
+	}
+
+	body, err := evt.marshal()
 	if err != nil {
 		return err
 	}
 
 	err = w.topic.Send(ctx, &pubsub.Message{
-		Body:     evt.Payload,
-		Metadata: md,
+		Body: body,
 	})
+
 	if err != nil {
 		return tracing.WithError(span, err)
 	}
 
-	eventsWritten.WithLabelValues(w.name).Inc()
+	eventsWritten.WithLabelValues(evt.typeName()).Inc()
 	return nil
 }
 

@@ -2,7 +2,6 @@ package event
 
 import (
 	"context"
-	"net/url"
 	"time"
 
 	"gocloud.dev/pubsub"
@@ -14,20 +13,14 @@ type (
 	// The Reader type is used to handle inbound events from a single topic.
 	Reader struct {
 		subscription *pubsub.Subscription
-		name         string
 	}
 )
 
 // NewReader creates a new instance of the Reader type that will read events from the configured
 // event stream provider identified using the given URL.
 func NewReader(ctx context.Context, urlStr string) (*Reader, error) {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return nil, err
-	}
-
 	subscription, err := pubsub.OpenSubscription(ctx, urlStr)
-	return &Reader{subscription: subscription, name: u.Host}, err
+	return &Reader{subscription: subscription}, err
 }
 
 // Read events from the stream, invoking fn for each inbound event. This method will block until fn returns
@@ -39,23 +32,27 @@ func (r *Reader) Read(ctx context.Context, fn Handler) error {
 			return err
 		}
 
-		// If the message contains tracing information, start a new span as the child. This means traces work
-		// across events.
-		span, ctx, err := tracing.SpanFromMetadata(ctx, "event-read", msg.Metadata)
+		evt, err := unmarshal(msg.Body)
 		if err != nil {
 			return err
 		}
 
-		span.SetTag("event.topic", r.name)
-		evt := Event{Payload: msg.Body, Topic: r.name}
-		if err := fn(ctx, evt); err != nil {
+		// If the message contains tracing information, start a new span as the child. This means traces work
+		// across events.
+		span, ctx, err := tracing.SpanFromMetadata(ctx, "event-read", evt.Sender.Metadata)
+		if err != nil {
+			return err
+		}
+
+		span.SetTag("event.type", evt.typeName())
+		if err = fn(ctx, evt); err != nil {
 			msg.Nack()
 			err = tracing.WithError(span, err)
 			span.Finish()
 			return err
 		}
 
-		eventsRead.WithLabelValues(r.name).Inc()
+		eventsRead.WithLabelValues(evt.typeName()).Inc()
 		msg.Ack()
 		span.Finish()
 	}
