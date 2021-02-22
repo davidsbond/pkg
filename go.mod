@@ -11,7 +11,7 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.14.1
-	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.4.3
 	github.com/golangci/golangci-lint v1.37.0
 	github.com/gorilla/handlers v1.5.1
