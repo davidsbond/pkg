@@ -104,7 +104,7 @@ plugins:
     #
     # Optional. If omitted, "directory" is used. Most users should not need to set this option.
     strategy: directory
-  - name java
+  - name: java
     out: gen/java
 
 As an example, here's a typical "buf.gen.yaml" go and grpc, assuming
@@ -170,6 +170,7 @@ before writing the result. This is equivalent behavior to "buf protoc --by_dir".
 			func(ctx context.Context, container appflag.Container) error {
 				return run(ctx, container, flags, moduleResolverReaderProvider)
 			},
+			bufcli.NewErrorInterceptor(name),
 		),
 		BindFlags: flags.Bind,
 	}
