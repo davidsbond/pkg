@@ -571,9 +571,6 @@ github.com/luna-duclos/instrumentedsql
 # github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201015064105-f9d01e123f16
 ## explicit
 github.com/luna-duclos/instrumentedsql/opentracing
-# github.com/magefile/mage v1.10.0
-github.com/magefile/mage/mg
-github.com/magefile/mage/sh
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
 # github.com/maratori/testpackage v1.0.1
@@ -711,7 +708,7 @@ github.com/securego/gosec/v2/rules
 github.com/shazow/go-diff/difflib
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
 github.com/shurcooL/sanitized_anchor_name
-# github.com/sirupsen/logrus v1.8.0
+# github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
 # github.com/sonatard/noctx v0.0.1
