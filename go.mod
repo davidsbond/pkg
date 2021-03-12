@@ -44,5 +44,5 @@ require (
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	google.golang.org/grpc v1.36.0
 	google.golang.org/protobuf v1.25.1-0.20201208041424-160c7477e0e8
-	mvdan.cc/gofumpt v0.1.0
+	mvdan.cc/gofumpt v0.1.1
 )
