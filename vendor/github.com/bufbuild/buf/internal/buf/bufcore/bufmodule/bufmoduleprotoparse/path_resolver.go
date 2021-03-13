@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bufcoreprotoparse
+package bufmoduleprotoparse
 
 import (
 	"context"
@@ -27,11 +27,12 @@ import (
 )
 
 type parserAccessorHandler struct {
-	ctx                context.Context
-	module             bufmodule.Module
-	pathToExternalPath map[string]string
-	nonImportPaths     map[string]struct{}
-	lock               sync.RWMutex
+	ctx                     context.Context
+	module                  bufmodule.Module
+	pathToExternalPath      map[string]string
+	nonImportPaths          map[string]struct{}
+	pathsToModuleReferences map[string]bufmodule.ModuleReference
+	lock                    sync.RWMutex
 }
 
 func newParserAccessorHandler(
@@ -39,10 +40,11 @@ func newParserAccessorHandler(
 	module bufmodule.Module,
 ) *parserAccessorHandler {
 	return &parserAccessorHandler{
-		ctx:                ctx,
-		module:             module,
-		pathToExternalPath: make(map[string]string),
-		nonImportPaths:     make(map[string]struct{}),
+		ctx:                     ctx,
+		module:                  module,
+		pathToExternalPath:      make(map[string]string),
+		nonImportPaths:          make(map[string]struct{}),
+		pathsToModuleReferences: make(map[string]bufmodule.ModuleReference),
 	}
 }
 
@@ -57,7 +59,7 @@ func (p *parserAccessorHandler) Open(path string) (_ io.ReadCloser, retErr error
 				// this should never happen, but just in case
 				return nil, fmt.Errorf("parser accessor requested path %q but got %q", path, wktModuleFile.Path())
 			}
-			if err := p.addPath(path, path, true); err != nil {
+			if err := p.addPath(path, path, true, nil); err != nil {
 				return nil, err
 			}
 			return wktModuleFile, nil
@@ -73,7 +75,12 @@ func (p *parserAccessorHandler) Open(path string) (_ io.ReadCloser, retErr error
 		// this should never happen, but just in case
 		return nil, fmt.Errorf("parser accessor requested path %q but got %q", path, moduleFile.Path())
 	}
-	if err := p.addPath(path, moduleFile.ExternalPath(), moduleFile.IsImport()); err != nil {
+	if err := p.addPath(
+		path,
+		moduleFile.ExternalPath(),
+		moduleFile.IsImport(),
+		moduleFile.ModuleReference(),
+	); err != nil {
 		return nil, err
 	}
 	return moduleFile, nil
@@ -95,7 +102,18 @@ func (p *parserAccessorHandler) IsImport(path string) bool {
 	return !isNotImport
 }
 
-func (p *parserAccessorHandler) addPath(path string, externalPath string, isImport bool) error {
+func (p *parserAccessorHandler) ModuleReference(path string) bufmodule.ModuleReference {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return p.pathsToModuleReferences[path] // nil is a valid value.
+}
+
+func (p *parserAccessorHandler) addPath(
+	path string,
+	externalPath string,
+	isImport bool,
+	moduleReference bufmodule.ModuleReference,
+) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	existingExternalPath, ok := p.pathToExternalPath[path]
@@ -108,6 +126,9 @@ func (p *parserAccessorHandler) addPath(path string, externalPath string, isImpo
 	}
 	if !isImport {
 		p.nonImportPaths[path] = struct{}{}
+	}
+	if moduleReference != nil {
+		p.pathsToModuleReferences[path] = moduleReference
 	}
 	return nil
 }

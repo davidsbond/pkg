@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bufcoreprotoparse
+package bufmoduleprotoparse
 
 import (
 	"context"
@@ -37,6 +37,8 @@ type ParserAccessorHandler interface {
 	ExternalPath(path string) string
 	// IsImport returns true if the path is an import.
 	IsImport(path string) bool
+	// Returns nil if not available.
+	ModuleReference(path string) bufmodule.ModuleReference
 }
 
 // NewParserAccessorHandler returns a new ParserAccessorHandler.
