@@ -1,10 +1,10 @@
 module pkg.dsb.dev
 
-go 1.15
+go 1.16
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.0.0 // indirect
-	github.com/bufbuild/buf v0.39.1
+	github.com/bufbuild/buf v0.40.0
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.10.0
@@ -12,7 +12,7 @@ require (
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/mock v1.5.0
-	github.com/golang/protobuf v1.4.3
+	github.com/golang/protobuf v1.4.4-0.20210303013846-acacf8158c9a
 	github.com/golangci/golangci-lint v1.38.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
@@ -42,7 +42,7 @@ require (
 	gocloud.dev/pubsub/rabbitpubsub v0.22.0
 	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	google.golang.org/grpc v1.36.0
-	google.golang.org/protobuf v1.25.1-0.20201208041424-160c7477e0e8
+	google.golang.org/grpc v1.37.0-dev.0.20210309003715-fce74a94bdff
+	google.golang.org/protobuf v1.25.1-0.20210303022638-839ce436895b
 	mvdan.cc/gofumpt v0.1.1
 )

@@ -5,7 +5,7 @@ jobs:
   # Job that runs all go tests.
   go-test:
     runs-on: ubuntu-latest
-    container: "golang:1.15"
+    container: "golang:1.16"
     services:
       postgres:
         image: postgres
@@ -57,7 +57,7 @@ jobs:
   # have not been committed.
   go-format:
     runs-on: ubuntu-latest
-    container: "golang:1.15"
+    container: "golang:1.16"
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -72,7 +72,7 @@ jobs:
   # errors.
   go-lint:
     runs-on: ubuntu-latest
-    container: "golang:1.15"
+    container: "golang:1.16"
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -84,7 +84,7 @@ jobs:
   # Job that ensures all dependencies are added to the go.mod and go.sum files
   go-mod:
     runs-on: ubuntu-latest
-    container: "golang:1.15"
+    container: "golang:1.16"
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -97,7 +97,7 @@ jobs:
   # if any changes from generation have not been committed.
   go-generate:
     runs-on: ubuntu-latest
-    container: "golang:1.15"
+    container: "golang:1.16"
     steps:
       - name: Checkout
         uses: actions/checkout@v1

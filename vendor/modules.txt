@@ -116,7 +116,7 @@ github.com/bgentry/go-netrc/netrc
 github.com/bkielbasa/cyclop/pkg/analyzer
 # github.com/bombsimon/wsl/v3 v3.2.0
 github.com/bombsimon/wsl/v3
-# github.com/bufbuild/buf v0.39.1
+# github.com/bufbuild/buf v0.40.0
 ## explicit
 github.com/bufbuild/buf/cmd/buf
 github.com/bufbuild/buf/internal/buf/bufanalysis
@@ -165,6 +165,8 @@ github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/repository/re
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/repository/repositorydelete
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/repository/repositoryget
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/repository/repositorylist
+github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/tag/tagcreate
+github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/tag/taglist
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/breaking
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/build
 github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configlsbreakingrules
@@ -200,7 +202,7 @@ github.com/bufbuild/buf/internal/pkg/filepathextended
 github.com/bufbuild/buf/internal/pkg/git
 github.com/bufbuild/buf/internal/pkg/httpauth
 github.com/bufbuild/buf/internal/pkg/interrupt
-github.com/bufbuild/buf/internal/pkg/ioutilextended
+github.com/bufbuild/buf/internal/pkg/ioextended
 github.com/bufbuild/buf/internal/pkg/netconfig
 github.com/bufbuild/buf/internal/pkg/netextended
 github.com/bufbuild/buf/internal/pkg/netrc
@@ -351,7 +353,7 @@ github.com/golang/groupcache/lru
 # github.com/golang/mock v1.5.0
 ## explicit
 github.com/golang/mock/gomock
-# github.com/golang/protobuf v1.4.3
+# github.com/golang/protobuf v1.4.4-0.20210303013846-acacf8158c9a
 ## explicit
 github.com/golang/protobuf/internal/gengogrpc
 github.com/golang/protobuf/jsonpb
@@ -423,7 +425,7 @@ github.com/golangci/revgrep
 github.com/golangci/unconvert
 # github.com/google/btree v1.0.0
 github.com/google/btree
-# github.com/google/go-cmp v0.5.4
+# github.com/google/go-cmp v0.5.5
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -543,7 +545,7 @@ github.com/kisielk/errcheck/errcheck
 # github.com/kisielk/gotool v1.0.0
 github.com/kisielk/gotool
 github.com/kisielk/gotool/internal/load
-# github.com/klauspost/compress v1.11.9
+# github.com/klauspost/compress v1.11.12
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
@@ -754,7 +756,7 @@ github.com/tomarrell/wrapcheck/wrapcheck
 github.com/tommy-muehle/go-mnd/v2
 github.com/tommy-muehle/go-mnd/v2/checks
 github.com/tommy-muehle/go-mnd/v2/config
-# github.com/twitchtv/twirp v7.1.0+incompatible
+# github.com/twitchtv/twirp v7.1.1+incompatible
 github.com/twitchtv/twirp
 github.com/twitchtv/twirp/ctxsetters
 github.com/twitchtv/twirp/internal/contextkeys
@@ -869,7 +871,7 @@ golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+# golang.org/x/net v0.0.0-20210315170653-34ac3e1c2000
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -894,7 +896,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210304152209-afaa3650a925
+# golang.org/x/sys v0.0.0-20210315160823-c6e025ad8005
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
@@ -1006,7 +1008,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210303154014-9728d6b83eeb
+# google.golang.org/genproto v0.0.0-20210315173758-2651cd453018
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/pubsub/v1
@@ -1016,7 +1018,7 @@ google.golang.org/genproto/protobuf/api
 google.golang.org/genproto/protobuf/field_mask
 google.golang.org/genproto/protobuf/ptype
 google.golang.org/genproto/protobuf/source_context
-# google.golang.org/grpc v1.36.0
+# google.golang.org/grpc v1.37.0-dev.0.20210309003715-fce74a94bdff
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -1075,7 +1077,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.25.1-0.20201208041424-160c7477e0e8
+# google.golang.org/protobuf v1.25.1-0.20210303022638-839ce436895b
 ## explicit
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
 google.golang.org/protobuf/compiler/protogen

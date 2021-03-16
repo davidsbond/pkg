@@ -52,7 +52,7 @@ import (
 
 const (
 	// Version is the version of buf.
-	Version = "0.39.1"
+	Version = "0.40.0"
 
 	// FlagDeprecationMessageSuffix is the suffix for flag deprecation messages.
 	FlagDeprecationMessageSuffix = `
@@ -667,6 +667,24 @@ func PrintRepositoryBranches(
 		return NewInternalError(err)
 	}
 	return repositoryBranchPrinter.PrintRepositoryBranches(ctx, repositoryBranches...)
+}
+
+// PrintRepositoryTags prints the provided repositoryTags to the writer.
+func PrintRepositoryTags(
+	ctx context.Context,
+	writer io.Writer,
+	formatString string,
+	repositoryTags ...*registryv1alpha1.RepositoryTag,
+) error {
+	format, err := bufprint.ParseFormat(formatString)
+	if err != nil {
+		return appcmd.NewInvalidArgumentError(err.Error())
+	}
+	repositoryTagPrinter, err := bufprint.NewRepositoryTagPrinter(writer, format)
+	if err != nil {
+		return NewInternalError(err)
+	}
+	return repositoryTagPrinter.PrintRepositoryTags(ctx, repositoryTags...)
 }
 
 // modifyRemotes modifies the remotes based on f.
