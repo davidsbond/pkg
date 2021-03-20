@@ -35,6 +35,7 @@ type String struct {
 	Destination *string
 	EnvVar      string
 	Required    bool
+	Hidden      bool
 }
 
 // Unwrap the String into its cli.Flag equivalent.
@@ -45,6 +46,7 @@ func (f *String) Unwrap() cli.Flag {
 		Value:       f.Value,
 		Destination: f.Destination,
 		Required:    f.Required,
+		Hidden:      f.Hidden,
 	}
 
 	if f.EnvVar != "" {
@@ -58,6 +60,7 @@ func (f *String) Unwrap() cli.Flag {
 type Boolean struct {
 	Value       bool
 	Required    bool
+	Hidden      bool
 	Destination *bool
 	Name        string
 	Usage       string
@@ -72,6 +75,7 @@ func (f *Boolean) Unwrap() cli.Flag {
 		Value:       f.Value,
 		Destination: f.Destination,
 		Required:    f.Required,
+		Hidden:      f.Hidden,
 	}
 
 	if f.EnvVar != "" {
@@ -89,6 +93,7 @@ type Float64 struct {
 	Destination *float64
 	EnvVar      string
 	Required    bool
+	Hidden      bool
 }
 
 // Unwrap the Float64 into its cli.Flag equivalent.
@@ -99,6 +104,7 @@ func (f *Float64) Unwrap() cli.Flag {
 		Value:       f.Value,
 		Destination: f.Destination,
 		Required:    f.Required,
+		Hidden:      f.Hidden,
 	}
 
 	if f.EnvVar != "" {
@@ -116,6 +122,7 @@ type Duration struct {
 	Destination *time.Duration
 	EnvVar      string
 	Required    bool
+	Hidden      bool
 }
 
 // Unwrap the Duration into its cli.Flag equivalent.
@@ -126,6 +133,7 @@ func (f *Duration) Unwrap() cli.Flag {
 		Value:       f.Value,
 		Destination: f.Destination,
 		Required:    f.Required,
+		Hidden:      f.Hidden,
 	}
 
 	if f.EnvVar != "" {
@@ -143,6 +151,7 @@ type Int struct {
 	Destination *int
 	EnvVar      string
 	Required    bool
+	Hidden      bool
 }
 
 // Unwrap the Int into its cli.Flag equivalent.
@@ -153,6 +162,7 @@ func (f *Int) Unwrap() cli.Flag {
 		Value:       f.Value,
 		Destination: f.Destination,
 		Required:    f.Required,
+		Hidden:      f.Hidden,
 	}
 
 	if f.EnvVar != "" {
