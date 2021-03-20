@@ -18,7 +18,6 @@ var Flags = flag.Flags{
 		Name:        "tracer-host",
 		Usage:       "Host for opentracing",
 		EnvVar:      "TRACER_HOST",
-		Value:       "jaeger:6831",
 		Destination: &config.host,
 	},
 	&flag.Float64{
