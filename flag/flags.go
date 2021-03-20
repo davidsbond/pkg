@@ -134,3 +134,30 @@ func (f *Duration) Unwrap() cli.Flag {
 
 	return fl
 }
+
+// The Int type represents a command-line flag that is parsed as an integer value.
+type Int struct {
+	Name        string
+	Usage       string
+	Value       int
+	Destination *int
+	EnvVar      string
+	Required    bool
+}
+
+// Unwrap the Int into its cli.Flag equivalent.
+func (f *Int) Unwrap() cli.Flag {
+	fl := &cli.IntFlag{
+		Name:        f.Name,
+		Usage:       f.Usage,
+		Value:       f.Value,
+		Destination: f.Destination,
+		Required:    f.Required,
+	}
+
+	if f.EnvVar != "" {
+		fl.EnvVars = []string{f.EnvVar}
+	}
+
+	return fl
+}
