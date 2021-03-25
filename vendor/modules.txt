@@ -488,7 +488,7 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/hashicorp/memberlist v0.2.2
+# github.com/hashicorp/memberlist v0.2.3
 ## explicit
 github.com/hashicorp/memberlist
 # github.com/inconshreveable/mousetrap v1.0.0
