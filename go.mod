@@ -20,7 +20,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/memberlist v0.2.3
 	github.com/jackc/pgtype v1.7.0
-	github.com/jackc/pgx/v4 v4.10.1
+	github.com/jackc/pgx/v4 v4.11.0
 	github.com/jlaffaye/ftp v0.0.0-20201112195030-9aae4d151126
 	github.com/luna-duclos/instrumentedsql v1.1.3
 	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201015064105-f9d01e123f16
@@ -40,7 +40,7 @@ require (
 	gocloud.dev/pubsub/kafkapubsub v0.22.0
 	gocloud.dev/pubsub/natspubsub v0.22.0
 	gocloud.dev/pubsub/rabbitpubsub v0.22.0
-	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
+	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	google.golang.org/grpc v1.37.0-dev.0.20210309003715-fce74a94bdff
 	google.golang.org/protobuf v1.25.1-0.20210303022638-839ce436895b
