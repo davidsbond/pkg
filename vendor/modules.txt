@@ -762,7 +762,7 @@ github.com/tommy-muehle/go-mnd/v2/config
 github.com/twitchtv/twirp
 github.com/twitchtv/twirp/ctxsetters
 github.com/twitchtv/twirp/internal/contextkeys
-# github.com/uber/jaeger-client-go v2.25.0+incompatible
+# github.com/uber/jaeger-client-go v2.26.0+incompatible
 ## explicit
 github.com/uber/jaeger-client-go
 github.com/uber/jaeger-client-go/internal/baggage

@@ -1188,8 +1188,8 @@ github.com/tommy-muehle/go-mnd/v2 v2.3.1 h1:a1S4+4HSXDJMgeODJH/t0EEKxcVla6Tasw+Z
 github.com/tommy-muehle/go-mnd/v2 v2.3.1/go.mod h1:WsUAkMJMYww6l/ufffCD3m+P7LEvr8TnZn9lwVDlgzw=
 github.com/twitchtv/twirp v7.1.1+incompatible h1:VgwjwtPtKRwVt80FRXNCSkm30+n4YhqroQMkjLEbtik=
 github.com/twitchtv/twirp v7.1.1+incompatible/go.mod h1:RRJoFSAmTEh2weEqWtpPE3vFK5YBhA6bqp2l1kfCC5A=
-github.com/uber/jaeger-client-go v2.25.0+incompatible h1:IxcNZ7WRY1Y3G4poYlx24szfsn/3LvK9QHCq9oQw8+U=
-github.com/uber/jaeger-client-go v2.25.0+incompatible/go.mod h1:WVhlPFC8FDjOFMMWRy2pZqQJSXxYSwNYOkTr/Z6d3Kk=
+github.com/uber/jaeger-client-go v2.26.0+incompatible h1:ZI30Y3B7H1lHLDAv8Y3pngXEnDOIHdCbybgcZwqMLJg=
+github.com/uber/jaeger-client-go v2.26.0+incompatible/go.mod h1:WVhlPFC8FDjOFMMWRy2pZqQJSXxYSwNYOkTr/Z6d3Kk=
 github.com/uber/jaeger-lib v2.4.0+incompatible h1:fY7QsGQWiCt8pajv4r7JEvmATdCVaWxXbjwyYwsNaLQ=
 github.com/uber/jaeger-lib v2.4.0+incompatible/go.mod h1:ComeNDZlWwrWnDv8aPp0Ba6+uUTzImX/AauajbLI56U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=

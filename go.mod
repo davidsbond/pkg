@@ -31,7 +31,7 @@ require (
 	github.com/sebdah/markdown-toc v0.0.0-20171116085747-3bb461875c34
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
-	github.com/uber/jaeger-client-go v2.25.0+incompatible
+	github.com/uber/jaeger-client-go v2.26.0+incompatible
 	github.com/uber/jaeger-lib v2.4.0+incompatible // indirect
 	github.com/unrolled/secure v1.0.8
 	github.com/urfave/cli/v2 v2.3.0
