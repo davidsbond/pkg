@@ -452,7 +452,7 @@ github.com/gostaticanalysis/comment/passes/commentmap
 github.com/gostaticanalysis/forcetypeassert
 # github.com/gostaticanalysis/nilerr v0.1.1
 github.com/gostaticanalysis/nilerr
-# github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
+# github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 ## explicit
 github.com/grpc-ecosystem/go-grpc-middleware
 github.com/grpc-ecosystem/go-grpc-middleware/recovery
