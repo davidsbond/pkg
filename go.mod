@@ -8,7 +8,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.10.0
-	github.com/go-playground/validator/v10 v10.5.0
+	github.com/go-playground/validator/v10 v10.6.0
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/mock v1.5.0
