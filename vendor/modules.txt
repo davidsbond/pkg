@@ -783,7 +783,7 @@ github.com/uber/jaeger-lib/metrics
 github.com/ultraware/funlen
 # github.com/ultraware/whitespace v0.0.4
 github.com/ultraware/whitespace
-# github.com/unrolled/secure v1.0.8
+# github.com/unrolled/secure v1.0.9
 ## explicit
 github.com/unrolled/secure
 # github.com/urfave/cli/v2 v2.3.0
