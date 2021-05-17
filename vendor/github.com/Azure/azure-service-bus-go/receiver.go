@@ -52,7 +52,7 @@ type (
 		prefetch           uint32
 		DefaultDisposition DispositionAction
 		Closed             bool
-		doneRefreshingAuth func()
+		cancelAuthRefresh  func() <-chan struct{}
 	}
 
 	// ReceiverOption provides a structure for configuring receivers
@@ -121,8 +121,6 @@ func (ns *Namespace) NewReceiver(ctx context.Context, entityPath string, opts ..
 		return nil, err
 	}
 
-	r.periodicallyRefreshAuth()
-
 	return r, nil
 }
 
@@ -143,8 +141,8 @@ func (r *Receiver) close(ctx context.Context) error {
 		r.doneListening()
 	}
 
-	if r.doneRefreshingAuth != nil {
-		r.doneRefreshingAuth()
+	if r.cancelAuthRefresh != nil {
+		<-r.cancelAuthRefresh()
 	}
 
 	r.Closed = true
@@ -199,13 +197,11 @@ func (r *Receiver) ReceiveOne(ctx context.Context, handler Handler) error {
 	ctx, span := r.startConsumerSpanFromContext(ctx, "sb.Receiver.ReceiveOne")
 	defer span.End()
 
-	amqpMsg, err := r.listenForMessage(ctx)
+	err := r.listenForMessage(ctx, newAmqpAdapterHandler(r, handler))
 	if err != nil {
 		tab.For(ctx).Error(err)
 		return err
 	}
-
-	r.handleMessage(ctx, amqpMsg, handler)
 
 	return nil
 }
@@ -218,21 +214,11 @@ func (r *Receiver) Listen(ctx context.Context, handler Handler) *ListenerHandle 
 	ctx, span := r.startConsumerSpanFromContext(ctx, "sb.Receiver.Listen")
 	defer span.End()
 
-	messages := make(chan *amqp.Message)
-	go r.listenForMessages(ctx, messages)
-	go r.handleMessages(ctx, messages, handler)
+	go r.listenForMessages(ctx, newAmqpAdapterHandler(r, handler))
 
 	return &ListenerHandle{
 		r:   r,
 		ctx: ctx,
-	}
-}
-
-func (r *Receiver) handleMessages(ctx context.Context, messages chan *amqp.Message, handler Handler) {
-	ctx, span := r.startConsumerSpanFromContext(ctx, "sb.Receiver.handleMessages")
-	defer span.End()
-	for msg := range messages {
-		r.handleMessage(ctx, msg, handler)
 	}
 }
 
@@ -292,21 +278,19 @@ func (r *Receiver) handleMessage(ctx context.Context, msg *amqp.Message, handler
 	}
 }
 
-func (r *Receiver) listenForMessages(ctx context.Context, msgChan chan *amqp.Message) {
+func (r *Receiver) listenForMessages(ctx context.Context, handler amqpHandler) {
 	ctx, span := r.startConsumerSpanFromContext(ctx, "sb.Receiver.listenForMessages")
 	defer span.End()
 
 	for {
-		msg, err := r.listenForMessage(ctx)
+		err := r.listenForMessage(ctx, handler)
 		if err == nil {
-			msgChan <- msg
 			continue
 		}
 
 		select {
 		case <-ctx.Done():
 			tab.For(ctx).Debug("context done")
-			close(msgChan)
 			return
 		default:
 			_, retryErr := common.Retry(10, 10*time.Second, func() (interface{}, error) {
@@ -334,7 +318,6 @@ func (r *Receiver) listenForMessages(ctx context.Context, msgChan chan *amqp.Mes
 				if err := r.Close(ctx); err != nil {
 					tab.For(ctx).Error(err)
 				}
-				close(msgChan)
 				return
 			}
 		}
@@ -347,29 +330,26 @@ func (r *Receiver) setLastError(err error) {
 	r.lastErrorMu.Unlock()
 }
 
-func (r *Receiver) listenForMessage(ctx context.Context) (*amqp.Message, error) {
+func (r *Receiver) listenForMessage(ctx context.Context, handler amqpHandler) error {
 	ctx, span := r.startConsumerSpanFromContext(ctx, "sb.Receiver.listenForMessage")
 	defer span.End()
 
 	var receiver *amqp.Receiver
 	r.clientMu.RLock()
 	if r.receiver == nil {
-		return nil, r.connClosedError(ctx)
+		r.clientMu.RUnlock()
+		return r.connClosedError(ctx)
 	}
 	receiver = r.receiver
 	r.clientMu.RUnlock()
-	msg, err := receiver.Receive(ctx)
+	err := receiver.HandleMessage(ctx, func(message *amqp.Message) error {
+		return handler.Handle(ctx, message)
+	})
 	if err != nil {
 		tab.For(ctx).Debug(err.Error())
-		return nil, err
+		return err
 	}
-
-	id := messageID(msg)
-	if idStr, ok := id.(string); ok {
-		span.AddAttributes(tab.StringAttribute("amqp.message.id", idStr))
-	}
-
-	return msg, nil
+	return nil
 }
 
 func (r *Receiver) connClosedError(ctx context.Context) error {
@@ -395,7 +375,7 @@ func (r *Receiver) newSessionAndLink(ctx context.Context) error {
 	}
 	r.client = client
 
-	err = r.namespace.negotiateClaim(ctx, client, r.entityPath)
+	r.cancelAuthRefresh, err = r.namespace.negotiateClaim(ctx, client, r.entityPath)
 	if err != nil {
 		tab.For(ctx).Error(err)
 		return err
@@ -455,37 +435,6 @@ func (r *Receiver) getSessionFilterLinkOption() (amqp.LinkOption, bool) {
 	}
 
 	return amqp.LinkSourceFilter(name, code, r.sessionID), true
-}
-
-func (r *Receiver) periodicallyRefreshAuth() {
-	ctx, done := context.WithCancel(context.Background())
-	r.doneRefreshingAuth = done
-
-	ctx, span := r.startConsumerSpanFromContext(ctx, "sb.Receiver.periodicallyRefreshAuth")
-	defer span.End()
-
-	doNegotiateClaimLocked := func(ctx context.Context, r *Receiver) {
-		r.clientMu.RLock()
-		defer r.clientMu.RUnlock()
-
-		if r.client != nil {
-			if err := r.namespace.negotiateClaim(ctx, r.client, r.entityPath); err != nil {
-				tab.For(ctx).Error(err)
-			}
-		}
-	}
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				time.Sleep(5 * time.Minute)
-				doNegotiateClaimLocked(ctx, r)
-			}
-		}
-	}()
 }
 
 func messageID(msg *amqp.Message) interface{} {

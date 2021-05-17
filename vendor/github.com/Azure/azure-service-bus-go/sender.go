@@ -24,6 +24,7 @@ package servicebus
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -37,15 +38,15 @@ import (
 type (
 	// Sender provides connection, session and link handling for an sending to an entity path
 	Sender struct {
-		namespace          *Namespace
-		client             *amqp.Client
-		clientMu           sync.RWMutex
-		session            *session
-		sender             *amqp.Sender
-		entityPath         string
-		Name               string
-		sessionID          *string
-		doneRefreshingAuth func()
+		namespace         *Namespace
+		client            *amqp.Client
+		clientMu          sync.RWMutex
+		session           *session
+		sender            *amqp.Sender
+		entityPath        string
+		Name              string
+		sessionID         *string
+		cancelAuthRefresh func() <-chan struct{}
 	}
 
 	// SendOption provides a way to customize a message on sending
@@ -84,8 +85,6 @@ func (ns *Namespace) NewSender(ctx context.Context, entityPath string, opts ...S
 		tab.For(ctx).Error(err)
 	}
 
-	s.periodicallyRefreshAuth()
-
 	return s, err
 }
 
@@ -118,8 +117,8 @@ func (s *Sender) Close(ctx context.Context) error {
 
 // closes the connection.  callers *must* hold the client write lock before calling!
 func (s *Sender) close(ctx context.Context) error {
-	if s.doneRefreshingAuth != nil {
-		s.doneRefreshingAuth()
+	if s.cancelAuthRefresh != nil {
+		<-s.cancelAuthRefresh()
 	}
 
 	var lastErr error
@@ -234,31 +233,10 @@ func (s *Sender) trySend(ctx context.Context, evt eventer) error {
 
 			switch err.(type) {
 			case *amqp.Error, *amqp.DetachError:
-				tab.For(ctx).Debug("recovering connection")
-				_, retryErr := common.Retry(10, 10*time.Second, func() (interface{}, error) {
-					ctx, sp := s.startProducerSpanFromContext(ctx, "sb.Sender.trySend.tryRecover")
-					defer sp.End()
-
-					err := s.Recover(ctx)
-					if err == nil {
-						tab.For(ctx).Debug("recovered connection")
-						return nil, nil
-					}
-
-					select {
-					case <-ctx.Done():
-						return nil, ctx.Err()
-					default:
-						return nil, common.Retryable(err.Error())
-					}
-				})
-
-				if retryErr != nil {
-					tab.For(ctx).Debug("sender recovering retried, but error was unrecoverable")
-					if err := s.Close(ctx); err != nil {
-						tab.For(ctx).Error(err)
-					}
-					return retryErr
+				err = s.handleAMQPError(ctx, err)
+				if err != nil {
+					tab.For(ctx).Error(err)
+					return err
 				}
 			default:
 				tab.For(ctx).Error(err)
@@ -266,6 +244,53 @@ func (s *Sender) trySend(ctx context.Context, evt eventer) error {
 			}
 		}
 	}
+}
+
+// handleAMQPError is called internally when an event has failed to send so we
+// can parse the error to determine whether we should attempt to retry sending the event again.
+func (s *Sender) handleAMQPError(ctx context.Context, err error) error {
+	var amqpError *amqp.Error
+	if errors.As(err, &amqpError) {
+		switch amqpError.Condition {
+		case errorServerBusy:
+			return s.retryRetryableAmqpError(ctx, amqpRetryDefaultTimes, amqpRetryBusyServerDelay)
+		case errorTimeout:
+			return s.retryRetryableAmqpError(ctx, amqpRetryDefaultTimes, amqpRetryDefaultDelay)
+		case errorOperationCancelled:
+			return s.retryRetryableAmqpError(ctx, amqpRetryDefaultTimes, amqpRetryDefaultDelay)
+		case errorContainerClose:
+			return s.retryRetryableAmqpError(ctx, amqpRetryDefaultTimes, amqpRetryDefaultDelay)
+		default:
+			return err
+		}
+	}
+	return s.retryRetryableAmqpError(ctx, amqpRetryDefaultTimes, amqpRetryDefaultDelay)
+}
+
+func (s *Sender) retryRetryableAmqpError(ctx context.Context, times int, delay time.Duration) error {
+	tab.For(ctx).Debug("recovering sender connection")
+	_, retryErr := common.Retry(times, delay, func() (interface{}, error) {
+		ctx, sp := s.startProducerSpanFromContext(ctx, "sb.Sender.trySend.tryRecover")
+		defer sp.End()
+
+		err := s.Recover(ctx)
+		if err == nil {
+			tab.For(ctx).Debug("recovered connection")
+			return nil, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			return nil, common.Retryable(err.Error())
+		}
+	})
+	if retryErr != nil {
+		tab.For(ctx).Debug("sender recovering retried, but error was unrecoverable")
+		return retryErr
+	}
+	return nil
 }
 
 func (s *Sender) connClosedError(ctx context.Context) error {
@@ -303,7 +328,7 @@ func (s *Sender) newSessionAndLink(ctx context.Context) error {
 	}
 	s.client = connection
 
-	err = s.namespace.negotiateClaim(ctx, connection, s.getAddress())
+	s.cancelAuthRefresh, err = s.namespace.negotiateClaim(ctx, connection, s.getAddress())
 	if err != nil {
 		tab.For(ctx).Error(err)
 		return err
@@ -335,37 +360,6 @@ func (s *Sender) newSessionAndLink(ctx context.Context) error {
 
 	s.sender = amqpSender
 	return nil
-}
-
-func (s *Sender) periodicallyRefreshAuth() {
-	ctx, done := context.WithCancel(context.Background())
-	s.doneRefreshingAuth = done
-
-	ctx, span := s.startProducerSpanFromContext(ctx, "sb.Sender.periodicallyRefreshAuth")
-	defer span.End()
-
-	doNegotiateClaimLocked := func(ctx context.Context, r *Sender) {
-		r.clientMu.RLock()
-		defer r.clientMu.RUnlock()
-
-		if r.client != nil {
-			if err := r.namespace.negotiateClaim(ctx, r.client, r.entityPath); err != nil {
-				tab.For(ctx).Error(err)
-			}
-		}
-	}
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				time.Sleep(5 * time.Minute)
-				doNegotiateClaimLocked(ctx, s)
-			}
-		}
-	}()
 }
 
 // SenderWithSession configures the message to send with a specific session and sequence. By default, a Sender has a
