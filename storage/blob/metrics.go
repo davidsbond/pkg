@@ -19,14 +19,14 @@ var (
 	bytesWritten = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
-		Name:      "bytes_written",
+		Name:      "bytes_written_total",
 		Help:      "Total number of bytes written to blob storage",
 	})
 
 	bytesRead = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
-		Name:      "bytes_read",
+		Name:      "bytes_read_total",
 		Help:      "Total number of bytes read from blob storage",
 	})
 

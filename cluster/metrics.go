@@ -20,21 +20,21 @@ var (
 	nodesJoined = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
-		Name:      "node_joined",
+		Name:      "node_joined_total",
 		Help:      "Count of node join events received",
 	})
 
 	nodesUpdated = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
-		Name:      "node_updated",
+		Name:      "node_updated_total",
 		Help:      "Count of node update events received",
 	})
 
 	nodesLeft = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
-		Name:      "node_leave",
+		Name:      "node_leave_total",
 		Help:      "Count of node leave events received",
 	})
 )

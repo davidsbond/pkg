@@ -23,6 +23,7 @@ linters:
     - exhaustivestruct
     - wrapcheck
     - forbidigo
+    - nolintlint
 
 issues:
   exclude-use-default: false
