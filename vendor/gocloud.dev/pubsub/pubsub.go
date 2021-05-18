@@ -89,6 +89,11 @@ import (
 
 // Message contains data to be published.
 type Message struct {
+	// LoggableID will be set to an opaque message identifer for
+	// received messages, useful for debug logging. No assumptions should
+	// be made about the content.
+	LoggableID string
+
 	// Body contains the content of the message.
 	Body []byte
 
@@ -110,6 +115,16 @@ type Message struct {
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeSend func(asFunc func(interface{}) bool) error
+
+	// AfterSend is a callback used when sending a message. It will always be
+	// set to nil for received messages.
+	//
+	// The callback will be called at most once, after the message is sent.
+	// If Send returns an error, AfterSend will not be called.
+	//
+	// asFunc converts its argument to driver-specific types.
+	// See https://gocloud.dev/concepts/as/ for background information.
+	AfterSend func(asFunc func(interface{}) bool) error
 
 	// asFunc invokes driver.Message.AsFunc.
 	asFunc func(interface{}) bool
@@ -232,6 +247,9 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 	if err != nil {
 		return err // t.err wrapped when set
 	}
+	if m.LoggableID != "" {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "pubsub: Message.LoggableID should not be set when sending a message")
+	}
 	for k, v := range m.Metadata {
 		if !utf8.ValidString(k) {
 			return gcerr.Newf(gcerr.InvalidArgument, nil, "pubsub: Message.Metadata keys must be valid UTF-8 strings: %q", k)
@@ -244,6 +262,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 		Body:       m.Body,
 		Metadata:   m.Metadata,
 		BeforeSend: m.BeforeSend,
+		AfterSend:  m.AfterSend,
 	}
 	return t.batcher.Add(ctx, dm)
 }
@@ -583,11 +602,17 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			if len(md) == 0 {
 				md = nil
 			}
+			loggableID := m.LoggableID
+			if loggableID == "" {
+				// This shouldn't happen, but just in case it's better to be explicit.
+				loggableID = "unknown"
+			}
 			m2 := &Message{
-				Body:     m.Body,
-				Metadata: md,
-				asFunc:   m.AsFunc,
-				nackable: s.canNack,
+				LoggableID: loggableID,
+				Body:       m.Body,
+				Metadata:   md,
+				asFunc:     m.AsFunc,
+				nackable:   s.canNack,
 			}
 			m2.ack = func(isAck bool) {
 				// Ignore the error channel. Errors are dealt with

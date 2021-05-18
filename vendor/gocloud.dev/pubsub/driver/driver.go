@@ -37,6 +37,10 @@ type AckInfo struct {
 // Message is data to be published (sent) to a topic and later received from
 // subscriptions on that topic.
 type Message struct {
+	// LoggableID should be set to an opaque message identifer for
+	// received messages.
+	LoggableID string
+
 	// Body contains the content of the message.
 	Body []byte
 
@@ -62,6 +66,16 @@ type Message struct {
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeSend func(asFunc func(interface{}) bool) error
+
+	// AfterSend is a callback used when sending a message. It should remain
+	// nil on messages returned from ReceiveBatch.
+	//
+	// The callback must be called at most once, after the message is sent.
+	// If Send returns an error, AfterSend will not be called.
+	//
+	// asFunc converts its argument to driver-specific types.
+	// See https://gocloud.dev/concepts/as/ for background information.
+	AfterSend func(asFunc func(interface{}) bool) error
 }
 
 // Topic publishes messages.
