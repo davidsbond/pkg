@@ -19,14 +19,14 @@ var (
 	eventsWritten = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
-		Name:      "events_written",
+		Name:      "events_written_total",
 		Help:      "Total number of events written to the stream",
 	}, []string{"type"})
 
 	eventsRead = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
-		Name:      "events_read",
+		Name:      "events_read_total",
 		Help:      "Total number of events read from the stream",
 	}, []string{"type"})
 )

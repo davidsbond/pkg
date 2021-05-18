@@ -119,7 +119,7 @@ github.com/beorn7/perks/quantile
 github.com/bgentry/go-netrc/netrc
 # github.com/bkielbasa/cyclop v1.2.0
 github.com/bkielbasa/cyclop/pkg/analyzer
-# github.com/bombsimon/wsl/v3 v3.2.0
+# github.com/bombsimon/wsl/v3 v3.3.0
 github.com/bombsimon/wsl/v3
 # github.com/bufbuild/buf v0.41.0
 ## explicit
@@ -247,6 +247,8 @@ github.com/cespare/xxhash
 github.com/cespare/xxhash/v2
 # github.com/charithe/durationcheck v0.0.6
 github.com/charithe/durationcheck
+# github.com/chavacava/garif v0.0.0-20210405163807-87a70f3d418b
+github.com/chavacava/garif
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/daixiang0/gci v0.2.8
@@ -281,6 +283,8 @@ github.com/eapache/go-xerial-snappy
 github.com/eapache/queue
 # github.com/esimonov/ifshort v1.0.2
 github.com/esimonov/ifshort/pkg/analyzer
+# github.com/ettle/strcase v0.1.1
+github.com/ettle/strcase
 # github.com/fatih/color v1.10.0
 github.com/fatih/color
 # github.com/fatih/structtag v1.2.0
@@ -299,7 +303,7 @@ github.com/getsentry/sentry-go
 github.com/getsentry/sentry-go/http
 github.com/getsentry/sentry-go/internal/crypto/randutil
 github.com/getsentry/sentry-go/internal/debug
-# github.com/go-critic/go-critic v0.5.5
+# github.com/go-critic/go-critic v0.5.6
 github.com/go-critic/go-critic/checkers
 github.com/go-critic/go-critic/checkers/internal/astwalk
 github.com/go-critic/go-critic/checkers/internal/lintutil
@@ -390,7 +394,7 @@ github.com/golangci/go-misc/deadcode
 # github.com/golangci/gofmt v0.0.0-20190930125516-244bba706f1a
 github.com/golangci/gofmt/gofmt
 github.com/golangci/gofmt/goimports
-# github.com/golangci/golangci-lint v1.39.0
+# github.com/golangci/golangci-lint v1.40.1
 ## explicit
 github.com/golangci/golangci-lint/cmd/golangci-lint
 github.com/golangci/golangci-lint/internal/cache
@@ -474,7 +478,7 @@ github.com/hashicorp/errwrap
 github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-msgpack v0.5.3
 github.com/hashicorp/go-msgpack/codec
-# github.com/hashicorp/go-multierror v1.1.0
+# github.com/hashicorp/go-multierror v1.1.1
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-sockaddr v1.0.0
 github.com/hashicorp/go-sockaddr
@@ -543,7 +547,7 @@ github.com/jirfag/go-printf-func-name/pkg/analyzer
 github.com/jlaffaye/ftp
 # github.com/jmespath/go-jmespath v0.4.0
 github.com/jmespath/go-jmespath
-# github.com/julz/importas v0.0.0-20210228071311-d0bf5cb4e1db
+# github.com/julz/importas v0.0.0-20210419104244-841f0c0fe66d
 github.com/julz/importas
 # github.com/kisielk/errcheck v1.6.0
 github.com/kisielk/errcheck/errcheck
@@ -567,6 +571,8 @@ github.com/kunwardeep/paralleltest/pkg/paralleltest
 github.com/kyoh86/exportloopref
 # github.com/ldez/gomoddirectives v0.2.1
 github.com/ldez/gomoddirectives
+# github.com/ldez/tagliatelle v0.2.0
+github.com/ldez/tagliatelle
 # github.com/leodido/go-urn v1.2.0
 github.com/leodido/go-urn
 # github.com/lib/pq v1.10.1
@@ -600,7 +606,7 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mbilski/exhaustivestruct/pkg/analyzer
 # github.com/mgechev/dots v0.0.0-20190921121421-c36f7dcfbb81
 github.com/mgechev/dots
-# github.com/mgechev/revive v1.0.5
+# github.com/mgechev/revive v1.0.6
 github.com/mgechev/revive/config
 github.com/mgechev/revive/formatter
 github.com/mgechev/revive/lint
@@ -664,7 +670,7 @@ github.com/pkg/errors
 github.com/pkg/profile
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/polyfloyd/go-errorlint v0.0.0-20201127212506-19bd8db6546f
+# github.com/polyfloyd/go-errorlint v0.0.0-20210418123303-74da32850375
 github.com/polyfloyd/go-errorlint/errorlint
 # github.com/prometheus/client_golang v1.10.0
 ## explicit
@@ -672,6 +678,7 @@ github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
 github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_golang/prometheus/push
+github.com/prometheus/client_golang/prometheus/testutil/promlint
 # github.com/prometheus/client_model v0.2.0
 github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.18.0
@@ -682,10 +689,11 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/quasilyte/go-ruleguard v0.3.1
+# github.com/quasilyte/go-ruleguard v0.3.4
+github.com/quasilyte/go-ruleguard/internal/gogrep
 github.com/quasilyte/go-ruleguard/internal/golist
-github.com/quasilyte/go-ruleguard/internal/mvdan.cc/gogrep
 github.com/quasilyte/go-ruleguard/internal/xtypes
+github.com/quasilyte/go-ruleguard/nodetag
 github.com/quasilyte/go-ruleguard/ruleguard
 github.com/quasilyte/go-ruleguard/ruleguard/goutil
 github.com/quasilyte/go-ruleguard/ruleguard/quasigo
@@ -700,7 +708,7 @@ github.com/russross/blackfriday/v2
 github.com/ryancurrah/gomodguard
 # github.com/ryanrolds/sqlclosecheck v0.3.0
 github.com/ryanrolds/sqlclosecheck/pkg/analyzer
-# github.com/sanposhiho/wastedassign v0.2.0
+# github.com/sanposhiho/wastedassign v1.0.0
 github.com/sanposhiho/wastedassign
 # github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529
 github.com/sean-/seed
@@ -752,13 +760,13 @@ github.com/stretchr/testify/mock
 github.com/subosito/gotenv
 # github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b
 github.com/tdakkota/asciicheck
-# github.com/tetafro/godot v1.4.4
+# github.com/tetafro/godot v1.4.6
 github.com/tetafro/godot
 # github.com/timakin/bodyclose v0.0.0-20200424151742-cb6215831a94
 github.com/timakin/bodyclose/passes/bodyclose
-# github.com/tomarrell/wrapcheck v1.0.0
-github.com/tomarrell/wrapcheck/wrapcheck
-# github.com/tommy-muehle/go-mnd/v2 v2.3.1
+# github.com/tomarrell/wrapcheck/v2 v2.1.0
+github.com/tomarrell/wrapcheck/v2/wrapcheck
+# github.com/tommy-muehle/go-mnd/v2 v2.3.2
 github.com/tommy-muehle/go-mnd/v2
 github.com/tommy-muehle/go-mnd/v2/checks
 github.com/tommy-muehle/go-mnd/v2/config
@@ -795,6 +803,8 @@ github.com/unrolled/secure
 github.com/urfave/cli/v2
 # github.com/uudashr/gocognit v1.0.1
 github.com/uudashr/gocognit
+# github.com/yeya24/promlinter v0.1.0
+github.com/yeya24/promlinter
 # go.opencensus.io v0.23.0
 go.opencensus.io
 go.opencensus.io/internal
@@ -904,7 +914,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210503173754-0981d6026fa6
+# golang.org/x/sys v0.0.0-20210510120138-977fb7262007
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
@@ -924,7 +934,7 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/tools v0.1.0
+# golang.org/x/tools v0.1.2-0.20210512205948-8287d5da45e4
 golang.org/x/tools/go/analysis
 golang.org/x/tools/go/analysis/passes/asmdecl
 golang.org/x/tools/go/analysis/passes/assign
@@ -952,8 +962,10 @@ golang.org/x/tools/go/analysis/passes/nilfunc
 golang.org/x/tools/go/analysis/passes/nilness
 golang.org/x/tools/go/analysis/passes/pkgfact
 golang.org/x/tools/go/analysis/passes/printf
+golang.org/x/tools/go/analysis/passes/reflectvaluecompare
 golang.org/x/tools/go/analysis/passes/shadow
 golang.org/x/tools/go/analysis/passes/shift
+golang.org/x/tools/go/analysis/passes/sigchanyzer
 golang.org/x/tools/go/analysis/passes/sortslice
 golang.org/x/tools/go/analysis/passes/stdmethods
 golang.org/x/tools/go/analysis/passes/stringintconv
@@ -964,6 +976,7 @@ golang.org/x/tools/go/analysis/passes/unmarshal
 golang.org/x/tools/go/analysis/passes/unreachable
 golang.org/x/tools/go/analysis/passes/unsafeptr
 golang.org/x/tools/go/analysis/passes/unusedresult
+golang.org/x/tools/go/analysis/passes/unusedwrite
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/go/buildutil
@@ -1175,7 +1188,7 @@ gopkg.in/jcmturner/rpc.v1/ndr
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 gopkg.in/yaml.v3
-# honnef.co/go/tools v0.1.3
+# honnef.co/go/tools v0.1.4
 honnef.co/go/tools/analysis/code
 honnef.co/go/tools/analysis/edit
 honnef.co/go/tools/analysis/facts

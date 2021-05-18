@@ -28,8 +28,8 @@ type (
 	// themselves.
 	Metadata struct {
 		Version                string          `json:"version,omitempty"`
-		ApplicationName        string          `json:"application_name,omitempty"`
-		ApplicationDescription string          `json:"application_description,omitempty"`
+		ApplicationName        string          `json:"applicationName,omitempty"`
+		ApplicationDescription string          `json:"applicationDescription,omitempty"`
 		Compiled               time.Time       `json:"compiled,omitempty"`
 		Extra                  json.RawMessage `json:"extra,omitempty"`
 	}
