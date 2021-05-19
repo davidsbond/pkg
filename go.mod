@@ -38,7 +38,7 @@ require (
 	go.uber.org/automaxprocs v1.4.0
 	gocloud.dev v0.23.0
 	gocloud.dev/pubsub/kafkapubsub v0.23.0
-	gocloud.dev/pubsub/natspubsub v0.22.0
+	gocloud.dev/pubsub/natspubsub v0.23.0
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
