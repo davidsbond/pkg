@@ -906,7 +906,7 @@ gocloud.dev/pubsub/kafkapubsub
 # gocloud.dev/pubsub/natspubsub v0.22.0
 ## explicit
 gocloud.dev/pubsub/natspubsub
-# gocloud.dev/pubsub/rabbitpubsub v0.22.0
+# gocloud.dev/pubsub/rabbitpubsub v0.23.0
 ## explicit
 gocloud.dev/pubsub/rabbitpubsub
 # golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
