@@ -40,6 +40,7 @@
 //  - Topic: *nats.Conn
 //  - Subscription: *nats.Subscription
 //  - Message.BeforeSend: None.
+//  - Message.AfterSend: None.
 //  - Message: *nats.Msg
 package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 
@@ -231,6 +232,12 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		if err := t.nc.Publish(t.subj, payload); err != nil {
 			return err
 		}
+		if m.AfterSend != nil {
+			asFunc := func(i interface{}) bool { return false }
+			if err := m.AfterSend(asFunc); err != nil {
+				return err
+			}
+		}
 	}
 	// Per specification this is supposed to only return after
 	// a message has been sent. Normally NATS is very efficient
@@ -283,8 +290,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 func (*topic) Close() error { return nil }
 
 type subscription struct {
-	nc   *nats.Conn
-	nsub *nats.Subscription
+	nc     *nats.Conn
+	nsub   *nats.Subscription
+	nextID int
 }
 
 // OpenSubscription returns a *pubsub.Subscription representing a NATS subscription or NATS queue subscription.
@@ -309,7 +317,7 @@ func openSubscription(nc *nats.Conn, subject string, opts *SubscriptionOptions) 
 	if err != nil {
 		return nil, err
 	}
-	return &subscription{nc, sub}, nil
+	return &subscription{nc, sub, 1}, nil
 }
 
 // ReceiveBatch implements driver.ReceiveBatch.
@@ -329,6 +337,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	if err != nil {
 		return nil, err
 	}
+	dm.LoggableID = fmt.Sprintf("msg #%d", s.nextID)
+	s.nextID++
 	return []*driver.Message{dm}, nil
 }
 

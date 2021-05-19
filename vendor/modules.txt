@@ -661,13 +661,11 @@ github.com/moricho/tparallel/pkg/ssafunc
 github.com/moricho/tparallel/pkg/ssainstr
 # github.com/nakabonne/nestif v0.3.0
 github.com/nakabonne/nestif
-# github.com/nats-io/jwt v1.2.2
-github.com/nats-io/jwt
-# github.com/nats-io/nats.go v1.10.0
+# github.com/nats-io/nats.go v1.11.0
 github.com/nats-io/nats.go
 github.com/nats-io/nats.go/encoders/builtin
 github.com/nats-io/nats.go/util
-# github.com/nats-io/nkeys v0.2.0
+# github.com/nats-io/nkeys v0.3.0
 github.com/nats-io/nkeys
 # github.com/nats-io/nuid v1.0.1
 github.com/nats-io/nuid
@@ -903,7 +901,7 @@ gocloud.dev/pubsub/mempubsub
 # gocloud.dev/pubsub/kafkapubsub v0.23.0
 ## explicit
 gocloud.dev/pubsub/kafkapubsub
-# gocloud.dev/pubsub/natspubsub v0.22.0
+# gocloud.dev/pubsub/natspubsub v0.23.0
 ## explicit
 gocloud.dev/pubsub/natspubsub
 # gocloud.dev/pubsub/rabbitpubsub v0.23.0
