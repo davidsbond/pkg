@@ -33,6 +33,8 @@ import (
 const (
 	// LockFilePath defines the path to the lock file, relative to the root of the module.
 	LockFilePath = "buf.lock"
+	// DocumentationFilePath defines the path to the documentation file, relative to the root of the module.
+	DocumentationFilePath = "buf.md"
 	// MainBranch is the name of the branch created for every repository.
 	// This is the default branch used if no branch or commit is specified.
 	MainBranch = "main"
@@ -47,7 +49,7 @@ type FileInfo interface {
 	// Note this *can* be nil if we did not build from a named module.
 	// All code must assume this can be nil.
 	// nil checking should work since the backing type is always a pointer
-	ModuleReference() ModuleReference
+	ModuleCommit() ModuleCommit
 
 	isFileInfo()
 }
@@ -55,9 +57,9 @@ type FileInfo interface {
 // NewFileInfo returns a new FileInfo.
 func NewFileInfo(
 	coreFileInfo bufcore.FileInfo,
-	moduleReference ModuleReference,
+	moduleCommit ModuleCommit,
 ) FileInfo {
-	return newFileInfo(coreFileInfo, moduleReference)
+	return newFileInfo(coreFileInfo, moduleCommit)
 }
 
 // ModuleFile is a module file.
@@ -157,7 +159,7 @@ type ModuleReference interface {
 	// Prints either remote/owner/repository:{branch,commit}
 	fmt.Stringer
 
-	// Either branch or commit
+	// Either branch, tag, or commit
 	Reference() string
 
 	isModuleReference()
@@ -234,6 +236,31 @@ func ModuleReferenceForString(path string) (ModuleReference, error) {
 // needs to be done server-side.
 func IsCommitModuleReference(moduleReference ModuleReference) bool {
 	return isCommitReference(moduleReference.Reference())
+}
+
+// ModuleCommit is a module commit.
+//
+// Note that since commits belong to branches, we can deduce
+// the branch from the commit.
+type ModuleCommit interface {
+	ModuleIdentity
+
+	// Prints remote/owner/repository:commit
+	fmt.Stringer
+
+	Commit() string
+
+	isModuleCommit()
+}
+
+// NewModuleCommit returns a new validated ModuleCommit.
+func NewModuleCommit(
+	remote string,
+	owner string,
+	repository string,
+	commit string,
+) (ModuleCommit, error) {
+	return newModuleCommit(remote, owner, repository, commit)
 }
 
 // ModulePin is a module pin.
@@ -347,6 +374,9 @@ type Module interface {
 	//
 	// This includes all transitive dependencies.
 	DependencyModulePins() []ModulePin
+	// Documentation gets the contents of the module documentation file, buf.md and returns the string representation.
+	// This may return an empty string if the documentation file does not exist.
+	Documentation() string
 
 	getSourceReadBucket() storage.ReadBucket
 	// Note this *can* be nil if we did not build from a named module.
@@ -359,7 +389,7 @@ type Module interface {
 	// This approach assumes that all of the FileInfos returned
 	// from SourceFileInfos will have their ModuleReference
 	// set to the same value, which can be validated.
-	getModuleReference() ModuleReference
+	getModuleCommit() ModuleCommit
 	isModule()
 }
 
@@ -470,6 +500,14 @@ func NewModuleFileSet(
 	return newModuleFileSet(module, dependencies)
 }
 
+// Workspace represents a module workspace.
+type Workspace interface {
+	// GetModule gets the module identified by the given ModuleIdentity.
+	GetModule(moduleIdentity ModuleIdentity) (Module, bool)
+	// GetModules returns all of the modules found in the workspace.
+	GetModules() []Module
+}
+
 // ModuleToProtoModule converts the Module to a proto Module.
 //
 // This takes all Sources and puts them in the Module, not just Targets.
@@ -496,8 +534,9 @@ func ModuleToProtoModule(ctx context.Context, module Module) (*modulev1alpha1.Mo
 		protoModulePins[i] = NewProtoModulePinForModulePin(dependencyModulePin)
 	}
 	protoModule := &modulev1alpha1.Module{
-		Files:        protoModuleFiles,
-		Dependencies: protoModulePins,
+		Files:         protoModuleFiles,
+		Dependencies:  protoModulePins,
+		Documentation: module.Documentation(),
 	}
 	if err := ValidateProtoModule(protoModule); err != nil {
 		return nil, err
@@ -555,6 +594,11 @@ func ModuleDigest(ctx context.Context, module Module) (string, error) {
 			return "", err
 		}
 	}
+	if docs := module.Documentation(); docs != "" {
+		if _, err := hash.Write([]byte(docs)); err != nil {
+			return "", err
+		}
+	}
 	return fmt.Sprintf("%s-%s", b1DigestPrefix, base64.URLEncoding.EncodeToString(hash.Sum(nil))), nil
 }
 
@@ -573,6 +617,11 @@ func ModuleToBucket(
 	}
 	for _, fileInfo := range fileInfos {
 		if err := putModuleFileToBucket(ctx, module, fileInfo.Path(), writeBucket); err != nil {
+			return err
+		}
+	}
+	if docs := module.Documentation(); docs != "" {
+		if err := storage.PutPath(ctx, writeBucket, DocumentationFilePath, []byte(docs)); err != nil {
 			return err
 		}
 	}
@@ -684,8 +733,8 @@ func SortModulePins(modulePins []ModulePin) {
 type ObjectInfo interface {
 	storage.ObjectInfo
 
-	// ModuleReference gets this object's ModuleReference, if any.
-	ModuleReference() ModuleReference
+	// ModuleCommit gets this object's ModuleCommit, if any.
+	ModuleCommit() ModuleCommit
 }
 
 // ReadBucket extends the storage.ReadBucket interface with
@@ -719,9 +768,9 @@ type ReadBucket interface {
 // NewReadBucket returns a new ReadBucket.
 func NewReadBucket(
 	sourceReadBucket storage.ReadBucket,
-	moduleReference ModuleReference,
+	moduleCommit ModuleCommit,
 ) ReadBucket {
-	return newReadBucket(sourceReadBucket, moduleReference)
+	return newReadBucket(sourceReadBucket, moduleCommit)
 }
 
 // sortFileInfos sorts the FileInfos.
