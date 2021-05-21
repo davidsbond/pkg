@@ -17,6 +17,7 @@ package bufmodule
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/bufbuild/buf/internal/buf/bufcore"
 	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/internal"
@@ -28,7 +29,8 @@ import (
 type module struct {
 	sourceReadBucket     storage.ReadBucket
 	dependencyModulePins []ModulePin
-	moduleReference      ModuleReference
+	moduleCommit         ModuleCommit
+	documentation        string
 }
 
 func newModuleForProto(
@@ -43,6 +45,11 @@ func newModuleForProto(
 	for _, moduleFile := range protoModule.Files {
 		// we already know that paths are unique from validation
 		if err := storage.PutPath(ctx, readBucketBuilder, moduleFile.Path, moduleFile.Content); err != nil {
+			return nil, err
+		}
+	}
+	if docs := protoModule.GetDocumentation(); docs != "" {
+		if err := storage.PutPath(ctx, readBucketBuilder, DocumentationFilePath, []byte(docs)); err != nil {
 			return nil, err
 		}
 	}
@@ -92,12 +99,26 @@ func newModuleForBucketWithDependencyModulePins(
 	for _, option := range options {
 		option(moduleOptions)
 	}
+	documentationReader, err := sourceReadBucket.Get(ctx, DocumentationFilePath)
+	// we allow the lack of documentation file
+	if err != nil && !storage.IsNotExist(err) {
+		return nil, err
+	}
+	documentationContents := ""
+	if documentationReader != nil {
+		documentationBytes, err := io.ReadAll(documentationReader)
+		if err != nil {
+			return nil, err
+		}
+		documentationContents = string(documentationBytes)
+	}
 	// we rely on this being sorted here
 	SortModulePins(dependencyModulePins)
 	return &module{
 		sourceReadBucket:     storage.MapReadBucket(sourceReadBucket, storage.MatchPathExt(".proto")),
 		dependencyModulePins: dependencyModulePins,
-		moduleReference:      moduleOptions.moduleReference,
+		moduleCommit:         moduleOptions.moduleCommit,
+		documentation:        documentationContents,
 	}, nil
 }
 
@@ -113,7 +134,7 @@ func (m *module) SourceFileInfos(ctx context.Context) ([]FileInfo, error) {
 			return err
 		}
 		coreFileInfo := bufcore.NewFileInfoForObjectInfo(objectInfo, false)
-		fileInfos = append(fileInfos, NewFileInfo(coreFileInfo, m.moduleReference))
+		fileInfos = append(fileInfos, NewFileInfo(coreFileInfo, m.moduleCommit))
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("failed to enumerate module files: %w", err)
@@ -135,7 +156,7 @@ func (m *module) GetModuleFile(ctx context.Context, path string) (ModuleFile, er
 		return nil, err
 	}
 	coreFileInfo := bufcore.NewFileInfoForObjectInfo(readObjectCloser, false)
-	return newModuleFile(NewFileInfo(coreFileInfo, m.moduleReference), readObjectCloser), nil
+	return newModuleFile(NewFileInfo(coreFileInfo, m.moduleCommit), readObjectCloser), nil
 }
 
 func (m *module) DependencyModulePins() []ModulePin {
@@ -143,12 +164,16 @@ func (m *module) DependencyModulePins() []ModulePin {
 	return m.dependencyModulePins
 }
 
+func (m *module) Documentation() string {
+	return m.documentation
+}
+
 func (m *module) getSourceReadBucket() storage.ReadBucket {
 	return m.sourceReadBucket
 }
 
-func (m *module) getModuleReference() ModuleReference {
-	return m.moduleReference
+func (m *module) getModuleCommit() ModuleCommit {
+	return m.moduleCommit
 }
 
 func (m *module) isModule() {}
