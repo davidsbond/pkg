@@ -42,7 +42,7 @@ require (
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.37.1
+	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
 	mvdan.cc/gofumpt v0.1.1
 )
