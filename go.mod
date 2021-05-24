@@ -7,7 +7,7 @@ require (
 	github.com/bufbuild/buf v0.42.1
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.2
-	github.com/getsentry/sentry-go v0.10.0
+	github.com/getsentry/sentry-go v0.11.0
 	github.com/go-playground/validator/v10 v10.6.1
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.14.1
