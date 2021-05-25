@@ -1,7 +1,17 @@
 Changes by Version
 ==================
 
-2.29.0 (unreleased)
+2.29.2 (unreleased)
+-------------------
+- Nothing yet.
+
+
+2.29.1 (2021-05-24)
+-------------------
+- Remove dependency on "testing" in "thrift" (#586) -- @yurishkuro
+
+
+2.29.0 (2021-05-20)
 -------------------
 - Update vendored thrift to 0.14.1 (#584) -- @nhatthm
 
