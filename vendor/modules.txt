@@ -55,9 +55,9 @@ github.com/Shopify/sarama
 github.com/alexkohler/prealloc/pkg
 # github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da
 github.com/armon/go-metrics
-# github.com/ashanbrown/forbidigo v1.1.0
+# github.com/ashanbrown/forbidigo v1.2.0
 github.com/ashanbrown/forbidigo/forbidigo
-# github.com/ashanbrown/makezero v0.0.0-20210308000810-4155955488a0
+# github.com/ashanbrown/makezero v0.0.0-20210520155254-b6261585ddde
 github.com/ashanbrown/makezero/makezero
 # github.com/aws/aws-sdk-go v1.38.35
 github.com/aws/aws-sdk-go/aws
@@ -248,9 +248,9 @@ github.com/cenkalti/backoff
 github.com/cespare/xxhash
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
-# github.com/charithe/durationcheck v0.0.6
+# github.com/charithe/durationcheck v0.0.8
 github.com/charithe/durationcheck
-# github.com/chavacava/garif v0.0.0-20210405163807-87a70f3d418b
+# github.com/chavacava/garif v0.0.0-20210405164556-e8a0a408d6af
 github.com/chavacava/garif
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
@@ -288,7 +288,7 @@ github.com/eapache/queue
 github.com/esimonov/ifshort/pkg/analyzer
 # github.com/ettle/strcase v0.1.1
 github.com/ettle/strcase
-# github.com/fatih/color v1.10.0
+# github.com/fatih/color v1.12.0
 github.com/fatih/color
 # github.com/fatih/structtag v1.2.0
 github.com/fatih/structtag
@@ -398,7 +398,7 @@ github.com/golangci/go-misc/deadcode
 # github.com/golangci/gofmt v0.0.0-20190930125516-244bba706f1a
 github.com/golangci/gofmt/gofmt
 github.com/golangci/gofmt/goimports
-# github.com/golangci/golangci-lint v1.40.1
+# github.com/golangci/golangci-lint v1.41.0
 ## explicit
 github.com/golangci/golangci-lint/cmd/golangci-lint
 github.com/golangci/golangci-lint/internal/cache
@@ -569,7 +569,7 @@ github.com/jcmturner/gokrb5/v8/types
 # github.com/jcmturner/rpc/v2 v2.0.3
 github.com/jcmturner/rpc/v2/mstypes
 github.com/jcmturner/rpc/v2/ndr
-# github.com/jgautheron/goconst v1.4.0
+# github.com/jgautheron/goconst v1.5.1
 github.com/jgautheron/goconst
 # github.com/jhump/protoreflect v1.8.3-0.20210302193947-8255811fc3c0
 github.com/jhump/protoreflect/codec
@@ -580,7 +580,7 @@ github.com/jhump/protoreflect/desc/protoparse/ast
 github.com/jhump/protoreflect/dynamic
 github.com/jhump/protoreflect/internal
 github.com/jhump/protoreflect/internal/codec
-# github.com/jingyugao/rowserrcheck v0.0.0-20210315055705-d907ca737bb1
+# github.com/jingyugao/rowserrcheck v1.1.0
 github.com/jingyugao/rowserrcheck/passes/rowserr
 # github.com/jirfag/go-printf-func-name v0.0.0-20200119135958-7558a9eaa5af
 github.com/jirfag/go-printf-func-name/pkg/analyzer
@@ -648,7 +648,7 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mbilski/exhaustivestruct/pkg/analyzer
 # github.com/mgechev/dots v0.0.0-20190921121421-c36f7dcfbb81
 github.com/mgechev/dots
-# github.com/mgechev/revive v1.0.6
+# github.com/mgechev/revive v1.0.7
 github.com/mgechev/revive/config
 github.com/mgechev/revive/formatter
 github.com/mgechev/revive/lint
@@ -710,7 +710,7 @@ github.com/pkg/errors
 github.com/pkg/profile
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/polyfloyd/go-errorlint v0.0.0-20210418123303-74da32850375
+# github.com/polyfloyd/go-errorlint v0.0.0-20210510181950-ab96adb96fea
 github.com/polyfloyd/go-errorlint/errorlint
 # github.com/prometheus/client_golang v1.11.0
 ## explicit
@@ -744,12 +744,12 @@ github.com/quasilyte/regex/syntax
 github.com/rcrowley/go-metrics
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
-# github.com/ryancurrah/gomodguard v1.2.0
+# github.com/ryancurrah/gomodguard v1.2.1
 github.com/ryancurrah/gomodguard
 # github.com/ryanrolds/sqlclosecheck v0.3.0
 github.com/ryanrolds/sqlclosecheck/pkg/analyzer
-# github.com/sanposhiho/wastedassign v1.0.0
-github.com/sanposhiho/wastedassign
+# github.com/sanposhiho/wastedassign/v2 v2.0.6
+github.com/sanposhiho/wastedassign/v2
 # github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529
 github.com/sean-/seed
 # github.com/sebdah/markdown-toc v0.0.0-20171116085747-3bb461875c34
@@ -757,8 +757,9 @@ github.com/sean-/seed
 github.com/sebdah/markdown-toc
 github.com/sebdah/markdown-toc/cmd
 github.com/sebdah/markdown-toc/toc
-# github.com/securego/gosec/v2 v2.7.0
+# github.com/securego/gosec/v2 v2.8.0
 github.com/securego/gosec/v2
+github.com/securego/gosec/v2/cwe
 github.com/securego/gosec/v2/rules
 # github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c
 github.com/shazow/go-diff/difflib
@@ -800,13 +801,13 @@ github.com/stretchr/testify/mock
 github.com/subosito/gotenv
 # github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b
 github.com/tdakkota/asciicheck
-# github.com/tetafro/godot v1.4.6
+# github.com/tetafro/godot v1.4.7
 github.com/tetafro/godot
 # github.com/timakin/bodyclose v0.0.0-20200424151742-cb6215831a94
 github.com/timakin/bodyclose/passes/bodyclose
 # github.com/tomarrell/wrapcheck/v2 v2.1.0
 github.com/tomarrell/wrapcheck/v2/wrapcheck
-# github.com/tommy-muehle/go-mnd/v2 v2.3.2
+# github.com/tommy-muehle/go-mnd/v2 v2.4.0
 github.com/tommy-muehle/go-mnd/v2
 github.com/tommy-muehle/go-mnd/v2/checks
 github.com/tommy-muehle/go-mnd/v2/config
@@ -974,7 +975,7 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/tools v0.1.2-0.20210512205948-8287d5da45e4
+# golang.org/x/tools v0.1.3
 golang.org/x/tools/go/analysis
 golang.org/x/tools/go/analysis/passes/asmdecl
 golang.org/x/tools/go/analysis/passes/assign
@@ -1043,6 +1044,7 @@ golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/lsp/fuzzy
 golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
@@ -1190,7 +1192,7 @@ gopkg.in/ini.v1
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 gopkg.in/yaml.v3
-# honnef.co/go/tools v0.1.4
+# honnef.co/go/tools v0.2.0
 honnef.co/go/tools/analysis/code
 honnef.co/go/tools/analysis/edit
 honnef.co/go/tools/analysis/facts

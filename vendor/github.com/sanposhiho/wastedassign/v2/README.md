@@ -8,9 +8,11 @@ found the value ...
 
 ## Example
 
-The comment on the right is what this tool reports
+```go
+package main
 
-```
+import "fmt"
+
 func f() int {
 	a := 0 
         b := 0
@@ -27,10 +29,18 @@ func f() int {
 ```
 
 
+```bash
+$ go vet -vettool=`which wastedassign` sample.go            
+# command-line-arguments
+./sample.go:10:2: assigned to a, but never used afterwards
+./sample.go:12:2: assigned to b, but reassigned without using the value
+```
+
+
 ## Installation
 
 ```
-go get -u github.com/sanposhiho/wastedassign/cmd/wastedassign
+go get -u github.com/sanposhiho/wastedassign/v2/cmd/wastedassign
 ```
 
 ## Usage
@@ -45,7 +55,9 @@ And, you can use wastedassign in [golangci-lint](https://github.com/golangci/gol
 
 ## Contribution
 
-I am waiting for your contribution. Feel free to create an issue or a PR!
+I am waiting for your contribution :D 
+
+Feel free to create an issue or a PR!
 
 ### Run test
 
