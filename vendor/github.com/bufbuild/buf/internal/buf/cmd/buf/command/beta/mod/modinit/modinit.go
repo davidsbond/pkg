@@ -47,7 +47,7 @@ func NewCommand(
 	flags := newFlags()
 	return &appcmd.Command{
 		Use:        name,
-		Short:      fmt.Sprintf("Initializes and writes a new %s configuration file.", bufconfig.ExternalConfigV1Beta1FilePath),
+		Short:      fmt.Sprintf("Initializes and writes a new %s configuration file.", bufconfig.ExternalConfigFilePath),
 		Args:       cobra.NoArgs,
 		Deprecated: deprecated,
 		Hidden:     hidden,
@@ -55,7 +55,7 @@ func NewCommand(
 			func(ctx context.Context, container appflag.Container) error {
 				return run(ctx, container, flags)
 			},
-			bufcli.NewErrorInterceptor(name),
+			bufcli.NewErrorInterceptor(),
 		),
 		BindFlags: flags.Bind,
 	}
@@ -81,7 +81,7 @@ func (f *flags) Bind(flagSet *pflag.FlagSet) {
 		&f.DocumentationComments,
 		documentationCommentsFlagName,
 		false,
-		"Do not write inline documentation in the form of comments in the resulting configuration file.",
+		"Write inline documentation in the form of comments in the resulting configuration file.",
 	)
 	flagSet.StringVarP(
 		&f.OutDirPath,
@@ -132,7 +132,7 @@ func run(
 		return err
 	}
 	if exists {
-		return appcmd.NewInvalidArgumentErrorf("%s already exists, not overwriting", bufconfig.ExternalConfigV1Beta1FilePath)
+		return appcmd.NewInvalidArgumentErrorf("%s already exists, not overwriting", bufconfig.ExternalConfigFilePath)
 	}
 	var writeConfigOptions []bufconfig.WriteConfigOption
 	if flags.DocumentationComments {

@@ -19,12 +19,15 @@ import (
 	"time"
 
 	"github.com/bufbuild/buf/internal/buf/bufcli"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/mod/modclearcache"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/mod/modexport"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/mod/modinit"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/mod/modupdate"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/push"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/branch/branchcreate"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/branch/branchlist"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/commit/commitget"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/commit/commitlist"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/organization/organizationcreate"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/organization/organizationdelete"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/beta/registry/organization/organizationget"
@@ -38,6 +41,7 @@ import (
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/build"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configlsbreakingrules"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configlslintrules"
+	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/config/configmigratev1beta1"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/convert"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/generate"
 	"github.com/bufbuild/buf/internal/buf/cmd/buf/command/lint"
@@ -151,6 +155,7 @@ func NewRootCommand(
 				SubCommands: []*appcmd.Command{
 					configlslintrules.NewCommand("ls-lint-rules", builder, "", false),
 					configlsbreakingrules.NewCommand("ls-breaking-rules", builder, "", false),
+					configmigratev1beta1.NewCommand("migrate-v1beta1", builder),
 				},
 			},
 			{
@@ -188,6 +193,7 @@ func NewRootCommand(
 							modinit.NewCommand("init", builder, "", false),
 							modupdate.NewCommand("update", builder, moduleResolverReaderProvider),
 							modexport.NewCommand("export", builder, moduleResolverReaderProvider),
+							modclearcache.NewCommand("clear-cache", builder, "cc"),
 						},
 					},
 					{
@@ -227,6 +233,14 @@ func NewRootCommand(
 								SubCommands: []*appcmd.Command{
 									tagcreate.NewCommand("create", builder),
 									taglist.NewCommand("list", builder),
+								},
+							},
+							{
+								Use:   "commit",
+								Short: "Repository commit commands.",
+								SubCommands: []*appcmd.Command{
+									commitget.NewCommand("get", builder),
+									commitlist.NewCommand("list", builder),
 								},
 							},
 						},

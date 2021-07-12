@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -30,20 +29,17 @@ import (
 	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
 	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/bufmodulebuild"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
-	"github.com/bufbuild/buf/internal/buf/bufprint"
 	"github.com/bufbuild/buf/internal/buf/buftransport"
 	"github.com/bufbuild/buf/internal/buf/bufwire"
 	"github.com/bufbuild/buf/internal/buf/bufwork"
 	"github.com/bufbuild/buf/internal/gen/proto/apiclient/buf/alpha/registry/v1alpha1/registryv1alpha1apiclient"
-	registryv1alpha1 "github.com/bufbuild/buf/internal/gen/proto/go/buf/alpha/registry/v1alpha1"
 	"github.com/bufbuild/buf/internal/pkg/app"
-	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
 	"github.com/bufbuild/buf/internal/pkg/app/appflag"
 	"github.com/bufbuild/buf/internal/pkg/app/appname"
 	"github.com/bufbuild/buf/internal/pkg/git"
 	"github.com/bufbuild/buf/internal/pkg/httpauth"
-	"github.com/bufbuild/buf/internal/pkg/netconfig"
 	"github.com/bufbuild/buf/internal/pkg/netrc"
+	"github.com/bufbuild/buf/internal/pkg/normalpath"
 	"github.com/bufbuild/buf/internal/pkg/rpc"
 	"github.com/bufbuild/buf/internal/pkg/rpc/rpcauth"
 	"github.com/bufbuild/buf/internal/pkg/storage/storageos"
@@ -53,7 +49,9 @@ import (
 
 const (
 	// Version is the version of buf.
-	Version = "0.42.1"
+	Version = "0.44.0"
+	// VersionHeaderName is the name of the header carrying the bufcli version.
+	VersionHeaderName = "buf-version"
 
 	// FlagDeprecationMessageSuffix is the suffix for flag deprecation messages.
 	FlagDeprecationMessageSuffix = `
@@ -92,6 +90,49 @@ var (
 		SSHKeyFileEnvKey:         inputSSHKeyFileEnvKey,
 		SSHKnownHostsFilesEnvKey: inputSSHKnownHostsFilesEnvKey,
 	}
+
+	// AllCacheModuleRelDirPaths are all directory paths for all time concerning the module cache.
+	//
+	// These are normalized.
+	// These are relative to container.CacheDirPath().
+	//
+	// This variable is used for clearing the cache.
+	AllCacheModuleRelDirPaths = []string{
+		v1beta1CacheModuleDataRelDirPath,
+		v1beta1CacheModuleLockRelDirPath,
+		v1CacheModuleDataRelDirPath,
+		v1CacheModuleLockRelDirPath,
+		v1CacheModuleSumRelDirPath,
+	}
+
+	// v1CacheModuleDataRelDirPath is the relative path to the cache directory where module data
+	// was stored in v1beta1.
+	//
+	// Normalized.
+	v1beta1CacheModuleDataRelDirPath = "mod"
+
+	// v1CacheModuleLockRelDirPath is the relative path to the cache directory where module lock files
+	// were stored in v1beta1.
+	//
+	// Normalized.
+	v1beta1CacheModuleLockRelDirPath = normalpath.Join("lock", "mod")
+
+	// v1CacheModuleDataRelDirPath is the relative path to the cache directory where module data is stored.
+	//
+	// Normalized.
+	// This is where the actual "clones" of the modules are located.
+	v1CacheModuleDataRelDirPath = normalpath.Join("v1", "module", "data")
+	// v1CacheModuleLockRelDirPath is the relative path to the cache directory where module lock files are stored.
+	//
+	// Normalized.
+	// These lock files are used to make sure that multiple buf processes do not corrupt the cache.
+	v1CacheModuleLockRelDirPath = normalpath.Join("v1", "module", "lock")
+	// v1CacheModuleSumRelDirPath is the relative path to the cache directory where module digests are stored.
+	//
+	// Normalized.
+	// These digests are used to make sure that the data written is actually what we expect, and if it is not,
+	// we clear an entry from the cache, i.e. delete the relevant data directory.
+	v1CacheModuleSumRelDirPath = normalpath.Join("v1", "module", "sum")
 )
 
 // BindAsFileDescriptorSet binds the exclude-imports flag.
@@ -415,29 +456,6 @@ func NewConfig(container appflag.Container) (*bufapp.Config, error) {
 	return bufapp.NewConfig(container, externalConfig)
 }
 
-// UpdateRemote writes the user credentials to the user configuration.
-func UpdateRemote(container appflag.Container, address string, token string) error {
-	_, err := modifyRemotes(
-		container,
-		func(remoteProvider netconfig.RemoteProvider) (netconfig.RemoteProvider, bool, error) {
-			updatedRemoteProvider, err := remoteProvider.WithUpdatedRemote(address, token)
-			return updatedRemoteProvider, true, err
-		},
-	)
-	return err
-}
-
-// DeleteRemote deletes the user credentials from the user configuration.
-func DeleteRemote(container appflag.Container, address string) (bool, error) {
-	return modifyRemotes(
-		container,
-		func(remoteProvider netconfig.RemoteProvider) (netconfig.RemoteProvider, bool, error) {
-			updatedRemoteProvider, ok := remoteProvider.WithoutRemote(address)
-			return updatedRemoteProvider, ok, nil
-		},
-	)
-}
-
 // NewRegistryProvider creates a new registryv1alpha1apiclient.Provider.
 func NewRegistryProvider(ctx context.Context, container appflag.Container) (registryv1alpha1apiclient.Provider, error) {
 	config, err := NewConfig(container)
@@ -484,7 +502,7 @@ func NewContextModifierProvider(
 			return rpcauth.WithToken(
 				rpc.WithOutgoingHeader(
 					ctx,
-					"buf-version",
+					VersionHeaderName,
 					Version,
 				),
 				password,
@@ -601,125 +619,6 @@ func ReadModule(
 		return nil, nil, err
 	}
 	return module, moduleIdentity, err
-}
-
-// PrintUsers prints the provided users to the writer.
-func PrintUsers(
-	ctx context.Context,
-	writer io.Writer,
-	formatString string,
-	users ...*registryv1alpha1.User,
-) error {
-	format, err := bufprint.ParseFormat(formatString)
-	if err != nil {
-		return appcmd.NewInvalidArgumentError(err.Error())
-	}
-	userPrinter, err := bufprint.NewUserPrinter(writer, format)
-	if err != nil {
-		return NewInternalError(err)
-	}
-	return userPrinter.PrintUsers(ctx, users...)
-}
-
-// PrintOrganizations prints the provided organizations to the writer.
-func PrintOrganizations(
-	ctx context.Context,
-	address string,
-	writer io.Writer,
-	formatString string,
-	organizations ...*registryv1alpha1.Organization,
-) error {
-	format, err := bufprint.ParseFormat(formatString)
-	if err != nil {
-		return appcmd.NewInvalidArgumentError(err.Error())
-	}
-	organizationPrinter, err := bufprint.NewOrganizationPrinter(address, writer, format)
-	if err != nil {
-		return NewInternalError(err)
-	}
-	return organizationPrinter.PrintOrganizations(ctx, organizations...)
-}
-
-// PrintRepositories prints the provided repositories to the writer.
-func PrintRepositories(
-	ctx context.Context,
-	apiProvider registryv1alpha1apiclient.Provider,
-	address string,
-	writer io.Writer,
-	formatString string,
-	repositories ...*registryv1alpha1.Repository,
-) error {
-	format, err := bufprint.ParseFormat(formatString)
-	if err != nil {
-		return appcmd.NewInvalidArgumentError(err.Error())
-	}
-	repositoryPrinter, err := bufprint.NewRepositoryPrinter(apiProvider, address, writer, format)
-	if err != nil {
-		return NewInternalError(err)
-	}
-	return repositoryPrinter.PrintRepositories(ctx, repositories...)
-}
-
-// PrintRepositoryBranches prints the provided repositoryBranches to the writer.
-func PrintRepositoryBranches(
-	ctx context.Context,
-	writer io.Writer,
-	formatString string,
-	repositoryBranches ...*registryv1alpha1.RepositoryBranch,
-) error {
-	format, err := bufprint.ParseFormat(formatString)
-	if err != nil {
-		return appcmd.NewInvalidArgumentError(err.Error())
-	}
-	repositoryBranchPrinter, err := bufprint.NewRepositoryBranchPrinter(writer, format)
-	if err != nil {
-		return NewInternalError(err)
-	}
-	return repositoryBranchPrinter.PrintRepositoryBranches(ctx, repositoryBranches...)
-}
-
-// PrintRepositoryTags prints the provided repositoryTags to the writer.
-func PrintRepositoryTags(
-	ctx context.Context,
-	writer io.Writer,
-	formatString string,
-	repositoryTags ...*registryv1alpha1.RepositoryTag,
-) error {
-	format, err := bufprint.ParseFormat(formatString)
-	if err != nil {
-		return appcmd.NewInvalidArgumentError(err.Error())
-	}
-	repositoryTagPrinter, err := bufprint.NewRepositoryTagPrinter(writer, format)
-	if err != nil {
-		return NewInternalError(err)
-	}
-	return repositoryTagPrinter.PrintRepositoryTags(ctx, repositoryTags...)
-}
-
-// modifyRemotes modifies the remotes based on f.
-//
-// if f returns false, this performs no update and returns false.
-func modifyRemotes(container appflag.Container, f func(netconfig.RemoteProvider) (netconfig.RemoteProvider, bool, error)) (bool, error) {
-	externalConfig := bufapp.ExternalConfig{}
-	if err := appname.ReadConfig(container, &externalConfig); err != nil {
-		return false, err
-	}
-	config, err := bufapp.NewConfig(container, externalConfig)
-	if err != nil {
-		return false, err
-	}
-	updatedRemoteProvider, ok, err := f(config.RemoteProvider)
-	if err != nil {
-		return false, err
-	}
-	if !ok {
-		return false, nil
-	}
-	externalConfig.Remotes = updatedRemoteProvider.ToExternalRemotes()
-	if err := appname.WriteConfig(container, &externalConfig); err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 // promptUser reads a line from Stdin, prompting the user with the prompt first.

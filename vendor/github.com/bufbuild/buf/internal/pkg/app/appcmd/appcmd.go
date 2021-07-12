@@ -31,6 +31,8 @@ type Command struct {
 	// Use is the one-line usage message.
 	// Required.
 	Use string
+	// Aliases are aliases that can be used instead of the first word in Use.
+	Aliases []string
 	// Short is the short message shown in the 'help' output.
 	// Required if Long is set.
 	Short string
@@ -116,6 +118,12 @@ func run(
 		return err
 	}
 
+	// Cobra 1.2.0 introduced default completion commands under
+	// "<binary> completion <bash/zsh/fish/powershell>"". Since we have
+	// our own completion commands, disable the generation of the default
+	// commands.
+	cobraCommand.CompletionOptions.DisableDefaultCmd = true
+
 	// If the root command is not the only command, add hidden bash-completion,
 	// fish-completion, and zsh-completion commands.
 	if len(command.SubCommands) > 0 {
@@ -145,8 +153,33 @@ func run(
 		})
 	}
 
-	cobraCommand.SetArgs(app.Args(container)[1:])
 	cobraCommand.SetOut(container.Stderr())
+	args := app.Args(container)[1:]
+	// cobra will implicitly create __complete and __completeNoDesc subcommands
+	// https://github.com/spf13/cobra/blob/4590150168e93f4b017c6e33469e26590ba839df/completions.go#L14-L17
+	// at the very last possible point, to enable them to be overridden. Unfortunately
+	// the creation of the subcommands uses hidden helper methods (unlike the automatic help command support).
+	// See https://github.com/spf13/cobra/blob/4590150168e93f4b017c6e33469e26590ba839df/completions.go#L134.
+	//
+	// Additionally, the automatically generated commands inherit the output of the root command,
+	// which we are ensuring is always stderr.
+	// https://github.com/spf13/cobra/blob/4590150168e93f4b017c6e33469e26590ba839df/completions.go#L175
+	//
+	// bash completion has much more detailed code generation and doesn't rely on the __completion command
+	// in most cases, the zsh and fish completion implementation however exclusively rely on these commands.
+	// Those completion implementations send stderr to /dev/null
+	// https://github.com/spf13/cobra/blob/4590150168e93f4b017c6e33469e26590ba839df/zsh_completions.go#L135
+	// and the automatically generated __complete command sends extra data to /dev/null so we cannot
+	// work around this by minimally changing the code generation commands, we would have to rewrite the
+	// __completion command which is much more complicated.
+	//
+	// Instead of all that, we can peek at the positionals and if the sub command starts with __complete
+	// we sets its output to stdout. This would mean that we cannot add a "real" sub-command that starts with
+	// __complete _and_ has its output set to stderr. This shouldn't ever be a problem.
+	if len(args) > 0 && strings.HasPrefix(args[0], "__complete") {
+		cobraCommand.SetOut(container.Stdout())
+	}
+	cobraCommand.SetArgs(args)
 	cobraCommand.SetErr(container.Stderr())
 
 	if err := cobraCommand.Execute(); err != nil {
@@ -166,6 +199,7 @@ func commandToCobra(
 	}
 	cobraCommand := &cobra.Command{
 		Use:        command.Use,
+		Aliases:    command.Aliases,
 		Args:       command.Args,
 		Deprecated: command.Deprecated,
 		Hidden:     command.Hidden,
@@ -220,6 +254,8 @@ func commandToCobra(
 		cobraCommand.SetVersionTemplate("{{.Version}}\n")
 		cobraCommand.Version = command.Version
 	}
+	// appcommand prints errors, disable to prevent duplicates.
+	cobraCommand.SilenceErrors = true
 	return cobraCommand, nil
 }
 
