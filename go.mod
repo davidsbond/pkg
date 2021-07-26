@@ -8,7 +8,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/getsentry/sentry-go v0.11.0
-	github.com/go-playground/validator/v10 v10.7.0
+	github.com/go-playground/validator/v10 v10.8.0
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/mock v1.6.0
@@ -40,7 +40,7 @@ require (
 	gocloud.dev/pubsub/kafkapubsub v0.23.0
 	gocloud.dev/pubsub/natspubsub v0.23.0
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
-	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
+	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.26.0
