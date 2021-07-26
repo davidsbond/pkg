@@ -17,12 +17,10 @@ package appprotoexec
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/bufbuild/buf/internal/pkg/app"
@@ -70,12 +68,12 @@ func (h *protocProxyHandler) Handle(
 	ctx, span := trace.StartSpan(ctx, "protoc_proxy")
 	span.AddAttributes(trace.StringAttribute("plugin", filepath.Base(h.pluginName)))
 	defer span.End()
-	if app.DevStdinFilePath == "" {
-		return errors.New("app.DevStdinFilePath is empty for this platform")
-	}
-	featureProto3Optional, err := h.getFeatureProto3Optional(ctx, container)
+	protocVersion, err := h.getProtocVersion(ctx, container)
 	if err != nil {
 		return err
+	}
+	if h.pluginName == "kotlin" && !getKotlinSupported(protocVersion) {
+		return fmt.Errorf("kotlin is not supported for protoc version %s", versionString(protocVersion))
 	}
 	fileDescriptorSet := &descriptorpb.FileDescriptorSet{
 		File: request.ProtoFile,
@@ -83,6 +81,19 @@ func (h *protocProxyHandler) Handle(
 	fileDescriptorSetData, err := protoencoding.NewWireMarshaler().Marshal(fileDescriptorSet)
 	if err != nil {
 		return err
+	}
+	descriptorFilePath := app.DevStdinFilePath
+	var tmpFile tmp.File
+	if descriptorFilePath == "" {
+		// since we have no stdin file (i.e. Windows), we're going to have to use a temporary file
+		tmpFile, err = tmp.NewFileWithData(fileDescriptorSetData)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			retErr = multierr.Append(retErr, tmpFile.Close())
+		}()
+		descriptorFilePath = tmpFile.AbsPath()
 	}
 	tmpDir, err := tmp.NewDir()
 	if err != nil {
@@ -92,9 +103,10 @@ func (h *protocProxyHandler) Handle(
 		retErr = multierr.Append(retErr, tmpDir.Close())
 	}()
 	args := []string{
-		fmt.Sprintf("--descriptor_set_in=%s", app.DevStdinFilePath),
+		fmt.Sprintf("--descriptor_set_in=%s", descriptorFilePath),
 		fmt.Sprintf("--%s_out=%s", h.pluginName, tmpDir.AbsPath()),
 	}
+	featureProto3Optional := getFeatureProto3Optional(protocVersion)
 	if featureProto3Optional {
 		args = append(
 			args,
@@ -115,7 +127,9 @@ func (h *protocProxyHandler) Handle(
 	)
 	cmd := exec.CommandContext(ctx, h.protocPath, args...)
 	cmd.Env = app.Environ(container)
-	cmd.Stdin = bytes.NewReader(fileDescriptorSetData)
+	if descriptorFilePath != "" && descriptorFilePath == app.DevStdinFilePath {
+		cmd.Stdin = bytes.NewReader(fileDescriptorSetData)
+	}
 	cmd.Stdout = io.Discard
 	cmd.Stderr = container.Stderr()
 	if err := cmd.Run(); err != nil {
@@ -150,10 +164,10 @@ func (h *protocProxyHandler) Handle(
 	)
 }
 
-func (h *protocProxyHandler) getFeatureProto3Optional(
+func (h *protocProxyHandler) getProtocVersion(
 	ctx context.Context,
 	container app.EnvContainer,
-) (bool, error) {
+) (*pluginpb.Version, error) {
 	stdoutBuffer := bytes.NewBuffer(nil)
 	stderrBuffer := bytes.NewBuffer(nil)
 	cmd := exec.CommandContext(ctx, h.protocPath, "--version")
@@ -164,39 +178,7 @@ func (h *protocProxyHandler) getFeatureProto3Optional(
 	cmd.Stderr = stderrBuffer
 	if err := cmd.Run(); err != nil {
 		// TODO: strip binary path as well?
-		return false, fmt.Errorf("%v\n%v", err, stderrBuffer.String())
+		return nil, fmt.Errorf("%v\n%v", err, stderrBuffer.String())
 	}
-	return getFeatureProto3OptionalForVersionString(strings.TrimSpace(stdoutBuffer.String())), nil
-}
-
-func getFeatureProto3OptionalForVersionString(value string) bool {
-	// This is buf's protoc, which supports proto3 optional
-	if strings.HasSuffix(value, "-buf") {
-		return true
-	}
-	// Otherwise, we parse what we expect from protoc
-	if !strings.HasPrefix(value, "libprotoc ") {
-		return false
-	}
-	value = strings.TrimPrefix(value, "libprotoc ")
-	split := strings.Split(value, ".")
-	if len(split) != 3 {
-		return false
-	}
-	major, err := strconv.Atoi(split[0])
-	if err != nil {
-		return false
-	}
-	minor, err := strconv.Atoi(split[1])
-	if err != nil {
-		return false
-	}
-	_, err = strconv.Atoi(split[2])
-	if err != nil {
-		return false
-	}
-	if major != 3 {
-		return false
-	}
-	return minor > 11 && minor < 15
+	return parseVersionForCLIVersion(strings.TrimSpace(stdoutBuffer.String()))
 }
