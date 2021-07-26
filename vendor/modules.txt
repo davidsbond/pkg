@@ -262,7 +262,7 @@ github.com/davecgh/go-spew/spew
 github.com/denis-tingajkin/go-header
 # github.com/devigned/tab v0.1.1
 github.com/devigned/tab
-# github.com/dgraph-io/badger/v2 v2.2007.2
+# github.com/dgraph-io/badger/v2 v2.2007.3
 ## explicit
 github.com/dgraph-io/badger/v2
 github.com/dgraph-io/badger/v2/options
