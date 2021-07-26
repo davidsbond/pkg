@@ -200,6 +200,7 @@ type GocognitSettings struct {
 }
 
 type GoConstSettings struct {
+	IgnoreTests         bool `mapstructure:"ignore-tests"`
 	MatchWithConstants  bool `mapstructure:"match-constant"`
 	MinStringLen        int  `mapstructure:"min-len"`
 	MinOccurrencesCount int  `mapstructure:"min-occurrences"`
@@ -379,6 +380,7 @@ type ReviveSettings struct {
 		Name      string
 		Arguments []interface{}
 		Severity  string
+		Disabled  bool
 	}
 	ErrorCode   int `mapstructure:"error-code"`
 	WarningCode int `mapstructure:"warning-code"`
@@ -394,6 +396,15 @@ type RowsErrCheckSettings struct {
 
 type StaticCheckSettings struct {
 	GoVersion string `mapstructure:"go"`
+
+	Checks                  []string `mapstructure:"checks"`
+	Initialisms             []string `mapstructure:"initialisms"`                // only for stylecheck
+	DotImportWhitelist      []string `mapstructure:"dot-import-whitelist"`       // only for stylecheck
+	HTTPStatusCodeWhitelist []string `mapstructure:"http-status-code-whitelist"` // only for stylecheck
+}
+
+func (s *StaticCheckSettings) HasConfiguration() bool {
+	return len(s.Initialisms) > 0 || len(s.HTTPStatusCodeWhitelist) > 0 || len(s.DotImportWhitelist) > 0 || len(s.Checks) > 0
 }
 
 type StructCheckSettings struct {
