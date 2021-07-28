@@ -18,9 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bufbuild/buf/internal/buf/bufapimodule"
 	"github.com/bufbuild/buf/internal/buf/bufcli"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
 	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
 	"github.com/bufbuild/buf/internal/pkg/app/appflag"
 	"github.com/bufbuild/buf/internal/pkg/normalpath"
@@ -38,18 +39,21 @@ const (
 func NewCommand(
 	name string,
 	builder appflag.Builder,
-	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
+	deprecated string,
+	hidden bool,
 ) *appcmd.Command {
 	flags := newFlags()
 	return &appcmd.Command{
-		Use:   name + " <module_name>",
-		Short: "Export a module to a directory.",
-		Args:  cobra.ExactArgs(1),
+		Use:        name + " <module_name>",
+		Short:      "Export a module to a directory.",
+		Args:       cobra.ExactArgs(1),
+		Deprecated: deprecated,
+		Hidden:     hidden,
 		Run: builder.NewRunFunc(
 			func(ctx context.Context, container appflag.Container) error {
-				return run(ctx, container, flags, moduleResolverReaderProvider)
+				return run(ctx, container, flags)
 			},
-			bufcli.NewErrorInterceptor(name),
+			bufcli.NewErrorInterceptor(),
 		),
 		BindFlags: flags.Bind,
 	}
@@ -71,17 +75,14 @@ func (f *flags) Bind(flagSet *pflag.FlagSet) {
 		"",
 		"Required. The location to export the module to. Must be a local directory.",
 	)
+	_ = cobra.MarkFlagRequired(flagSet, outputFlagName)
 }
 
 func run(
 	ctx context.Context,
 	container appflag.Container,
 	flags *flags,
-	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
 ) error {
-	if flags.Output == "" {
-		return bufcli.NewFlagIsRequiredError(outputFlagName)
-	}
 	moduleRef, err := buffetch.NewModuleRefParser(
 		container.Logger(),
 	).GetModuleRef(
@@ -91,11 +92,15 @@ func run(
 	if err != nil {
 		return bufcli.NewModuleRefError(container.Arg(0))
 	}
-	moduleResolver, err := moduleResolverReaderProvider.GetModuleResolver(ctx, container)
+	registryProvider, err := bufcli.NewRegistryProvider(ctx, container)
 	if err != nil {
 		return err
 	}
-	moduleReader, err := moduleResolverReaderProvider.GetModuleReader(ctx, container)
+	moduleResolver := bufapimodule.NewModuleResolver(container.Logger(), registryProvider)
+	if err != nil {
+		return err
+	}
+	moduleReader, err := bufcli.NewModuleReaderAndCreateCacheDirs(container, registryProvider)
 	if err != nil {
 		return err
 	}

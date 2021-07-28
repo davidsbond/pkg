@@ -19,7 +19,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
 	"github.com/bufbuild/buf/internal/pkg/app"
 	"github.com/bufbuild/buf/internal/pkg/git"
 	"github.com/bufbuild/buf/internal/pkg/httpauth"
@@ -373,6 +373,14 @@ type ReadBucketCloser interface {
 	SubDirPath() string
 }
 
+// ReadWriteBucketCloser is a bucket potentially returned from GetBucket.
+//
+// The returned ReadBucketCloser may be upgradeable to a ReadWriteBucketCloser.
+type ReadWriteBucketCloser interface {
+	ReadBucketCloser
+	storage.WriteBucket
+}
+
 // Reader is a reader.
 type Reader interface {
 	// GetFile gets the file.
@@ -384,6 +392,8 @@ type Reader interface {
 		options ...GetFileOption,
 	) (io.ReadCloser, error)
 	// GetBucket gets the bucket.
+	//
+	// The returned ReadBucketCloser may actually be upgradeable to a ReadWriteBucketCloser.
 	GetBucket(
 		ctx context.Context,
 		container app.EnvStdinContainer,
@@ -691,22 +701,22 @@ func WithGetFileKeepFileCompression() GetFileOption {
 // GetBucketOption is a GetBucket option.
 type GetBucketOption func(*getBucketOptions)
 
-// WithGetBucketTerminateFileName only applies if subdir is specified.
+// WithGetBucketTerminateFileNames only applies if subdir is specified.
 //
 // This says that if given a subdir, ascend directories until you reach
-// a file with this name, and if you do, the returned bucket will be
+// a file one of these names, and if you do, the returned bucket will be
 // for the directory with this filename, while SubDirPath on the
 // returned bucket will be set to the original subdir relative
 // to the terminate file.
 //
 // This is used for workspaces. So if you have i.e. "proto/foo"
-// subdir, and terminate file "proto/buf.work", the returned bucket will
+// subdir, and terminate file "proto/buf.work.yaml", the returned bucket will
 // be for "proto", and the SubDirPath will be "foo".
 //
-// The terminateFileName is expected to be valid and have no slashes.
-func WithGetBucketTerminateFileName(terminateFileName string) GetBucketOption {
+// The terminateFileNames are expected to be valid and have no slashes.
+func WithGetBucketTerminateFileNames(terminateFileNames ...string) GetBucketOption {
 	return func(getBucketOptions *getBucketOptions) {
-		getBucketOptions.terminateFileName = terminateFileName
+		getBucketOptions.terminateFileNames = terminateFileNames
 	}
 }
 

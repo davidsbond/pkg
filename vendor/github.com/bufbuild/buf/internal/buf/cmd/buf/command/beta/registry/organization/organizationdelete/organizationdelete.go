@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/buf/internal/buf/bufcli"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
 	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
 	"github.com/bufbuild/buf/internal/pkg/app/appflag"
 	"github.com/bufbuild/buf/internal/pkg/rpc"
@@ -43,7 +43,7 @@ func NewCommand(
 			func(ctx context.Context, container appflag.Container) error {
 				return run(ctx, container, flags)
 			},
-			bufcli.NewErrorInterceptor(name),
+			bufcli.NewErrorInterceptor(),
 		),
 		BindFlags: flags.Bind,
 	}
@@ -84,7 +84,7 @@ func run(
 		return err
 	}
 	if !flags.Force {
-		if err := bufcli.PromptUserForDelete(container, "organization", container.Arg(0)); err != nil {
+		if err := bufcli.PromptUserForDelete(container, "organization", moduleOwner.Owner()); err != nil {
 			return err
 		}
 	}
