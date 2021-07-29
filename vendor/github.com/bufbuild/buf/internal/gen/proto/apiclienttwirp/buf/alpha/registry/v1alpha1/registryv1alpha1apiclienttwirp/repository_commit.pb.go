@@ -36,9 +36,9 @@ func (s *repositoryCommitService) ListRepositoryCommitsByBranch(
 	repositoryName string,
 	repositoryBranchName string,
 	pageSize uint32,
-	pageToken int64,
+	pageToken string,
 	reverse bool,
-) (repositoryCommits []*v1alpha1.RepositoryCommit, nextPageToken int64, _ error) {
+) (repositoryCommits []*v1alpha1.RepositoryCommit, nextPageToken string, _ error) {
 	if s.contextModifier != nil {
 		ctx = s.contextModifier(ctx)
 	}
@@ -54,7 +54,38 @@ func (s *repositoryCommitService) ListRepositoryCommitsByBranch(
 		},
 	)
 	if err != nil {
-		return nil, 0, err
+		return nil, "", err
+	}
+	return response.RepositoryCommits, response.NextPageToken, nil
+}
+
+// ListRepositoryCommitsByReference returns repository commits up-to and including
+// the provided reference.
+func (s *repositoryCommitService) ListRepositoryCommitsByReference(
+	ctx context.Context,
+	repositoryOwner string,
+	repositoryName string,
+	reference string,
+	pageSize uint32,
+	pageToken string,
+	reverse bool,
+) (repositoryCommits []*v1alpha1.RepositoryCommit, nextPageToken string, _ error) {
+	if s.contextModifier != nil {
+		ctx = s.contextModifier(ctx)
+	}
+	response, err := s.client.ListRepositoryCommitsByReference(
+		ctx,
+		&v1alpha1.ListRepositoryCommitsByReferenceRequest{
+			RepositoryOwner: repositoryOwner,
+			RepositoryName:  repositoryName,
+			Reference:       reference,
+			PageSize:        pageSize,
+			PageToken:       pageToken,
+			Reverse:         reverse,
+		},
+	)
+	if err != nil {
+		return nil, "", err
 	}
 	return response.RepositoryCommits, response.NextPageToken, nil
 }

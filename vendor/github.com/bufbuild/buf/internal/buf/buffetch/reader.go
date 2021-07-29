@@ -19,8 +19,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
 	"github.com/bufbuild/buf/internal/buf/buffetch/internal"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
 	"github.com/bufbuild/buf/internal/buf/bufwork"
 	"github.com/bufbuild/buf/internal/pkg/app"
 	"github.com/bufbuild/buf/internal/pkg/git"
@@ -148,7 +148,7 @@ func (a *reader) GetSourceBucket(
 	if !getSourceBucketOptions.workspacesDisabled {
 		getBucketOptions = append(
 			getBucketOptions,
-			internal.WithGetBucketTerminateFileName(bufwork.ExternalConfigV1Beta1FilePath),
+			internal.WithGetBucketTerminateFileNames(bufwork.AllConfigFilePaths...),
 		)
 	}
 	return a.internalReader.GetBucket(
