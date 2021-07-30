@@ -30,6 +30,15 @@ import (
 	"github.com/bufbuild/buf/internal/pkg/stringutil"
 )
 
+const (
+	// CommentIgnorePrefix is the comment ignore prefix.
+	//
+	// Comments with this prefix do not count towards valid comments in the comment checkers.
+	// This is also used in buflint when constructing a new Runner, and is passed to the
+	// RunnerWithIgnorePrefix option.
+	CommentIgnorePrefix = "buf:lint:ignore"
+)
+
 var (
 	// CheckCommentEnum is a check function.
 	CheckCommentEnum = newEnumCheckFunc(checkCommentEnum)
@@ -85,7 +94,7 @@ func checkCommentNamedDescriptor(
 		// this will magically skip map entry fields as well as a side-effect, although originally unintended
 		return nil
 	}
-	if strings.TrimSpace(location.LeadingComments()) == "" {
+	if !validLeadingComment(location.LeadingComments()) {
 		add(namedDescriptor, location, nil, "%s %q should have a non-empty comment for documentation.", typeName, namedDescriptor.Name())
 	}
 	return nil
@@ -289,6 +298,8 @@ var (
 	CheckImportNoPublic = newFileImportCheckFunc(checkImportNoPublic)
 	// CheckImportNoWeak is a check function.
 	CheckImportNoWeak = newFileImportCheckFunc(checkImportNoWeak)
+	// CheckImportUsed is a check function.
+	CheckImportUsed = newFileImportCheckFunc(checkImportUsed)
 )
 
 func checkImportNoPublic(add addFunc, fileImport protosource.FileImport) error {
@@ -302,6 +313,13 @@ func checkImportNoWeak(add addFunc, fileImport protosource.FileImport) error {
 func checkImportNoPublicWeak(add addFunc, fileImport protosource.FileImport, value bool, name string) error {
 	if value {
 		add(fileImport, fileImport.Location(), nil, `Import %q must not be %s.`, fileImport.Import(), name)
+	}
+	return nil
+}
+
+func checkImportUsed(add addFunc, fileImport protosource.FileImport) error {
+	if fileImport.IsUnused() {
+		add(fileImport, fileImport.Location(), nil, `Import %q is unused.`, fileImport.Import())
 	}
 	return nil
 }
@@ -843,6 +861,16 @@ func checkServiceSuffix(add addFunc, service protosource.Service, suffix string)
 	name := service.Name()
 	if !strings.HasSuffix(name, suffix) {
 		add(service, service.NameLocation(), nil, "Service name %q should be suffixed with %q.", name, suffix)
+	}
+	return nil
+}
+
+// CheckSyntaxSpecified is a check function.
+var CheckSyntaxSpecified = newFileCheckFunc(checkSyntaxSpecified)
+
+func checkSyntaxSpecified(add addFunc, file protosource.File) error {
+	if file.Syntax() == protosource.SyntaxUnspecified {
+		add(file, file.SyntaxLocation(), nil, `Files must have a syntax explicitly specified. If no syntax is specified, the file defaults to "proto2".`)
 	}
 	return nil
 }
