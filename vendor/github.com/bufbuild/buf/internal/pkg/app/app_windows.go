@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build windows
 // +build windows
 
 package app
@@ -66,7 +67,7 @@ func HomeDirPath(envContainer EnvContainer) (string, error) {
 //
 // Users cannot assume that CacheDirPath, ConfigDirPath, and DataDirPath are unique.
 func CacheDirPath(envContainer EnvContainer) (string, error) {
-	if value := envContainer.Env("LocalAppData"); value != "" {
+	if value := envContainer.Env("LOCALAPPDATA"); value != "" {
 		return value, nil
 	}
 	return "", errors.New("%LocalAppData% is not set")
@@ -84,7 +85,7 @@ func CacheDirPath(envContainer EnvContainer) (string, error) {
 //
 // Users cannot assume that CacheDirPath, ConfigDirPath, and DataDirPath are unique.
 func ConfigDirPath(envContainer EnvContainer) (string, error) {
-	if value := envContainer.Env("AppData"); value != "" {
+	if value := envContainer.Env("APPDATA"); value != "" {
 		return value, nil
 	}
 	return "", errors.New("%AppData% is not set")
@@ -102,7 +103,7 @@ func ConfigDirPath(envContainer EnvContainer) (string, error) {
 //
 // Users cannot assume that CacheDirPath, ConfigDirPath, and DataDirPath are unique.
 func DataDirPath(envContainer EnvContainer) (string, error) {
-	if value := envContainer.Env("LocalAppData"); value != "" {
+	if value := envContainer.Env("LOCALAPPDATA"); value != "" {
 		return value, nil
 	}
 	return "", errors.New("%LocalAppData% is not set")

@@ -19,8 +19,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
 	"github.com/bufbuild/buf/internal/buf/buffetch/internal"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
 	"github.com/bufbuild/buf/internal/pkg/app"
 	"github.com/bufbuild/buf/internal/pkg/git"
 	"github.com/bufbuild/buf/internal/pkg/httpauth"
@@ -193,6 +193,12 @@ func NewSourceOrModuleRefParser(logger *zap.Logger) SourceOrModuleRefParser {
 // declaration to do so.
 type ReadBucketCloser internal.ReadBucketCloser
 
+// ReadWriteBucketCloser is a bucket returned from GetBucket.
+// We need to surface the internal.ReadWriteBucketCloser
+// interface to other packages, so we use a type
+// declaration to do so.
+type ReadWriteBucketCloser internal.ReadWriteBucketCloser
+
 // ImageReader is an image reader.
 type ImageReader interface {
 	// GetImageFile gets the image file.
@@ -210,6 +216,7 @@ type SourceReader interface {
 	// GetSource gets the source bucket.
 	//
 	// The returned bucket will only have .proto and configuration files.
+	// The returned bucket may be upgradeable to a ReadWriteBucketCloser.
 	GetSourceBucket(
 		ctx context.Context,
 		container app.EnvStdinContainer,

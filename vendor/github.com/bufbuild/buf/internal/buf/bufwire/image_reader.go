@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
+	"github.com/bufbuild/buf/internal/buf/bufimage"
 	imagev1 "github.com/bufbuild/buf/internal/gen/proto/go/buf/alpha/image/v1"
 	"github.com/bufbuild/buf/internal/pkg/app"
 	"github.com/bufbuild/buf/internal/pkg/protoencoding"
@@ -81,7 +81,9 @@ func (i *imageReader) GetImage(
 		// TODO right now, NewResolver sets AllowUnresolvable to true all the time
 		// we want to make this into a check, and we verify if we need this for the individual command
 		resolver, err := protoencoding.NewResolver(
-			firstProtoImage.File...,
+			bufimage.ProtoImageToFileDescriptors(
+				firstProtoImage,
+			)...,
 		)
 		if err != nil {
 			return nil, err
@@ -103,7 +105,9 @@ func (i *imageReader) GetImage(
 		span.End()
 		_, span = trace.StartSpan(ctx, "new_resolver")
 		resolver, err := protoencoding.NewResolver(
-			firstProtoImage.File...,
+			bufimage.ProtoImageToFileDescriptors(
+				firstProtoImage,
+			)...,
 		)
 		if err != nil {
 			return nil, err

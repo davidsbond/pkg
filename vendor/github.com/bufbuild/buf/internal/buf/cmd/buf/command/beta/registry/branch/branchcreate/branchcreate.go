@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/buf/internal/buf/bufcli"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
 	"github.com/bufbuild/buf/internal/buf/bufprint"
 	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
 	"github.com/bufbuild/buf/internal/pkg/app/appflag"
@@ -48,7 +48,7 @@ func NewCommand(
 			func(ctx context.Context, container appflag.Container) error {
 				return run(ctx, container, flags)
 			},
-			bufcli.NewErrorInterceptor(name),
+			bufcli.NewErrorInterceptor(),
 		),
 		BindFlags: flags.Bind,
 	}
@@ -85,7 +85,7 @@ func run(
 	flags *flags,
 ) error {
 	if flags.Parent == "" {
-		return bufcli.NewFlagIsRequiredError(parentFlagName)
+		return appcmd.NewInvalidArgumentErrorf("required flag %q not set", parentFlagName)
 	}
 	moduleReference, err := bufmodule.ModuleReferenceForString(
 		container.Arg(0),
@@ -96,6 +96,11 @@ func run(
 	if bufmodule.IsCommitModuleReference(moduleReference) {
 		return fmt.Errorf("branch is required but commit was given: %q", container.Arg(0))
 	}
+	format, err := bufprint.ParseFormat(flags.Format)
+	if err != nil {
+		return appcmd.NewInvalidArgumentError(err.Error())
+	}
+
 	apiProvider, err := bufcli.NewRegistryProvider(ctx, container)
 	if err != nil {
 		return err
@@ -124,5 +129,5 @@ func run(
 		}
 		return err
 	}
-	return bufcli.PrintRepositoryBranches(ctx, container.Stdout(), flags.Format, repositoryBranch)
+	return bufprint.NewRepositoryBranchPrinter(container.Stdout()).PrintRepositoryBranch(ctx, format, repositoryBranch)
 }

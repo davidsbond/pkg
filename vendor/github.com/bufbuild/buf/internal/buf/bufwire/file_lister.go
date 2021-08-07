@@ -19,10 +19,10 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/buf/internal/buf/bufconfig"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimagebuild"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/bufmodulebuild"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
+	"github.com/bufbuild/buf/internal/buf/bufimage/bufimagebuild"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
+	"github.com/bufbuild/buf/internal/buf/bufmodule/bufmodulebuild"
 	"github.com/bufbuild/buf/internal/buf/bufwork"
 	"github.com/bufbuild/buf/internal/pkg/app"
 	"github.com/bufbuild/buf/internal/pkg/storage"
@@ -96,11 +96,11 @@ func (e *fileLister) ListFiles(
 		defer func() {
 			retErr = multierr.Append(retErr, readBucketCloser.Close())
 		}()
-		exists, err := storage.Exists(ctx, readBucketCloser, bufwork.ExternalConfigV1Beta1FilePath)
+		existingConfigFilePath, err := bufwork.ExistingConfigFilePath(ctx, readBucketCloser)
 		if err != nil {
 			return nil, err
 		}
-		if subDirPath := readBucketCloser.SubDirPath(); !exists || subDirPath != "." {
+		if subDirPath := readBucketCloser.SubDirPath(); existingConfigFilePath == "" || subDirPath != "." {
 			return e.sourceFileInfosForDirectory(ctx, readBucketCloser, subDirPath, configOverride)
 		}
 		workspaceConfig, err := e.workspaceConfigProvider.GetConfig(ctx, readBucketCloser, readBucketCloser.RelativeRootPath())

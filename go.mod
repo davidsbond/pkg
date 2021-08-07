@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.0.0 // indirect
-	github.com/bufbuild/buf v0.42.1
+	github.com/bufbuild/buf v0.48.2
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.3
 	github.com/getsentry/sentry-go v0.11.0
@@ -42,7 +42,7 @@ require (
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.39.1
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/grpc v1.40.0-dev.0.20210708170655-30dfb4b933a5
+	google.golang.org/protobuf v1.27.1
 	mvdan.cc/gofumpt v0.1.1
 )
