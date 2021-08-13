@@ -25,15 +25,7 @@ import (
 	"github.com/bufbuild/buf/internal/pkg/protoencoding"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
-)
-
-var defaultVersion = newVersion(
-	DefaultMajorVersion,
-	DefaultMinorVersion,
-	DefaultPatchVersion,
-	DefaultSuffixVersion,
 )
 
 type binaryHandler struct {
@@ -63,7 +55,7 @@ func (h *binaryHandler) Handle(
 	unsetRequestVersion := false
 	if request.CompilerVersion == nil {
 		unsetRequestVersion = true
-		request.CompilerVersion = defaultVersion
+		request.CompilerVersion = DefaultVersion
 	}
 	requestData, err := protoencoding.NewWireMarshaler().Marshal(request)
 	if unsetRequestVersion {
@@ -105,16 +97,4 @@ func (h *binaryHandler) Handle(
 		responseWriter.AddError(response.GetError())
 	}
 	return nil
-}
-
-func newVersion(major int32, minor int32, patch int32, suffix string) *pluginpb.Version {
-	version := &pluginpb.Version{
-		Major: proto.Int32(major),
-		Minor: proto.Int32(minor),
-		Patch: proto.Int32(patch),
-	}
-	if suffix != "" {
-		version.Suffix = proto.String(suffix)
-	}
-	return version
 }
