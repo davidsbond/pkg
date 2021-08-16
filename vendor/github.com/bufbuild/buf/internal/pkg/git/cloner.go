@@ -77,30 +77,51 @@ func (c *cloner) CloneToBucket(
 	}
 
 	depthArg := strconv.Itoa(int(depth))
-	args := []string{"clone", "--depth", depthArg}
 
-	if options.Name != nil {
-		if cloneBranch := options.Name.cloneBranch(); cloneBranch != "" {
-			args = append(args, "--branch", cloneBranch, "--single-branch")
-		}
-	}
-
-	tmpDir, err := tmp.NewDir()
+	bareDir, err := tmp.NewDir()
 	if err != nil {
 		return err
 	}
 	defer func() {
-		retErr = multierr.Append(retErr, tmpDir.Close())
+		retErr = multierr.Append(retErr, bareDir.Close())
 	}()
-	args = append(args, url, tmpDir.AbsPath())
+	worktreeDir, err := tmp.NewDir()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		retErr = multierr.Append(retErr, worktreeDir.Close())
+	}()
 
+	buffer := bytes.NewBuffer(nil)
+	cmd := exec.CommandContext(ctx, "git", "init", "--bare")
+	cmd.Dir = bareDir.AbsPath()
+	cmd.Env = app.Environ(envContainer)
+	cmd.Stderr = buffer
+	if err := cmd.Run(); err != nil {
+		return newGitCommandError(err, buffer, bareDir)
+	}
+
+	var gitConfigAuthArgs []string
 	if strings.HasPrefix(url, "https://") {
+		// These extraArgs MUST be first, as the -c flag potentially produced
+		// is only a flag on the parent git command, not on git fetch.
 		extraArgs, err := c.getArgsForHTTPSCommand(envContainer)
 		if err != nil {
 			return err
 		}
-		args = append(args, extraArgs...)
+		gitConfigAuthArgs = append(gitConfigAuthArgs, extraArgs...)
 	}
+	fetchRef, checkoutRefs := getRefspecsForName(options.Name)
+	fetchArgs := append(
+		gitConfigAuthArgs,
+		"--git-dir="+bareDir.AbsPath(),
+		"fetch",
+		"--depth", depthArg,
+		url,
+		fetchRef,
+	)
+
 	if strings.HasPrefix(url, "ssh://") {
 		envContainer, err = c.getEnvContainerWithGitSSHCommand(envContainer)
 		if err != nil {
@@ -108,53 +129,55 @@ func (c *cloner) CloneToBucket(
 		}
 	}
 
-	buffer := bytes.NewBuffer(nil)
-	cmd := exec.CommandContext(ctx, "git", args...)
+	buffer.Reset()
+	cmd = exec.CommandContext(ctx, "git", fetchArgs...)
 	cmd.Env = app.Environ(envContainer)
 	cmd.Stderr = buffer
 	if err := cmd.Run(); err != nil {
-		// Suppress printing of temp path
-		return fmt.Errorf("%v\n%v", err, strings.Replace(buffer.String(), tmpDir.AbsPath(), "", -1))
+		return newGitCommandError(err, buffer, bareDir)
 	}
 
-	if options.Name != nil && options.Name.checkout() != "" {
-		args = []string{
-			"checkout",
-			options.Name.checkout(),
-		}
+	for _, checkoutRef := range checkoutRefs {
 		buffer.Reset()
+		args := append(
+			gitConfigAuthArgs,
+			"--git-dir="+bareDir.AbsPath(),
+			"--work-tree="+worktreeDir.AbsPath(),
+			"checkout",
+			checkoutRef,
+		)
 		cmd = exec.CommandContext(ctx, "git", args...)
 		cmd.Env = app.Environ(envContainer)
-		cmd.Dir = tmpDir.AbsPath()
 		cmd.Stderr = buffer
 		if err := cmd.Run(); err != nil {
-			// Suppress printing of temp path
-			return fmt.Errorf("%v\n%v", err, strings.Replace(buffer.String(), tmpDir.AbsPath(), "", -1))
+			return newGitCommandError(err, buffer, worktreeDir)
 		}
 	}
 
 	if options.RecurseSubmodules {
-		args = []string{
+		submoduleArgs := append(
+			gitConfigAuthArgs,
+			"--git-dir="+bareDir.AbsPath(),
+			"--work-tree="+worktreeDir.AbsPath(),
 			"submodule",
 			"update",
 			"--init",
 			"--recursive",
 			"--depth",
 			depthArg,
-		}
+		)
 		buffer.Reset()
-		cmd = exec.CommandContext(ctx, "git", args...)
+		cmd = exec.CommandContext(ctx, "git", submoduleArgs...)
 		cmd.Env = app.Environ(envContainer)
-		cmd.Dir = tmpDir.AbsPath()
 		cmd.Stderr = buffer
 		if err := cmd.Run(); err != nil {
 			// Suppress printing of temp path
-			return fmt.Errorf("%v\n%v", err, strings.Replace(buffer.String(), tmpDir.AbsPath(), "", -1))
+			return fmt.Errorf("%v\n%v", err, strings.Replace(buffer.String(), worktreeDir.AbsPath(), "", -1))
 		}
 	}
 
 	// we do NOT want to read in symlinks
-	tmpReadWriteBucket, err := c.storageosProvider.NewReadWriteBucket(tmpDir.AbsPath())
+	tmpReadWriteBucket, err := c.storageosProvider.NewReadWriteBucket(worktreeDir.AbsPath())
 	if err != nil {
 		return err
 	}
@@ -183,7 +206,7 @@ func (c *cloner) getArgsForHTTPSCommand(envContainer app.EnvContainer) ([]string
 	}
 	c.logger.Debug("git_credential_helper_override")
 	return []string{
-		"--config",
+		"-c",
 		fmt.Sprintf(
 			// TODO: is this OK for windows/other platforms?
 			// we might need an alternate flow where the binary has a sub-command to do this, and calls itself
@@ -255,4 +278,40 @@ func getSSHKnownHostsFilePaths(sshKnownHostsFiles string) []string {
 		}
 	}
 	return filePaths
+}
+
+func getRefspecsForName(gitName Name) (string, []string) {
+	if gitName == nil {
+		return "HEAD", []string{"FETCH_HEAD"}
+	}
+	if gitName.cloneBranch() != "" && gitName.checkout() != "" {
+		// When doing branch/tag clones, make sure we use a
+		// refspec that creates a local referece in `refs/` even if the ref
+		// is remote tracking, so that the checkoutRefs may reference it,
+		// for example:
+		//   branch=origin/main,ref=origin/main~1
+		fetchRefSpec := gitName.cloneBranch() + ":" + gitName.cloneBranch()
+		return fetchRefSpec, []string{"FETCH_HEAD", gitName.checkout()}
+	} else if gitName.cloneBranch() != "" {
+		return gitName.cloneBranch(), []string{"FETCH_HEAD"}
+	} else if gitName.checkout() != "" {
+		// After fetch we won't have checked out any refs. This
+		// will cause `refs=` containing "HEAD" to fail, as HEAD
+		// is a special case that is not fetched into a ref but
+		// instead refers to the current commit checked out. By
+		// checking out "FETCH_HEAD" before checking out the
+		// user supplied ref, we behave similarly to git clone.
+		return "HEAD", []string{"FETCH_HEAD", gitName.checkout()}
+	} else {
+		return "HEAD", []string{"FETCH_HEAD"}
+	}
+}
+
+func newGitCommandError(
+	err error,
+	buffer *bytes.Buffer,
+	tmpDir tmp.Dir,
+) error {
+	// Suppress printing of temp path
+	return fmt.Errorf("%v\n%v", err, strings.TrimSpace(strings.Replace(buffer.String(), tmpDir.AbsPath(), "", -1)))
 }
