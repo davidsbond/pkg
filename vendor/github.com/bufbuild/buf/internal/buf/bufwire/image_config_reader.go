@@ -16,14 +16,15 @@ package bufwire
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/bufbuild/buf/internal/buf/bufanalysis"
 	"github.com/bufbuild/buf/internal/buf/bufconfig"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimagebuild"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/bufmodulebuild"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
+	"github.com/bufbuild/buf/internal/buf/bufimage/bufimagebuild"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
+	"github.com/bufbuild/buf/internal/buf/bufmodule/bufmodulebuild"
 	"github.com/bufbuild/buf/internal/buf/bufwork"
 	"github.com/bufbuild/buf/internal/pkg/app"
 	"github.com/bufbuild/buf/internal/pkg/storage/storageos"
@@ -98,7 +99,7 @@ func (i *imageConfigReader) GetImageConfigs(
 		)
 		return []ImageConfig{env}, nil, err
 	case buffetch.SourceRef:
-		return i.GetSourceOrModuleImageConfigs(
+		return i.getSourceOrModuleImageConfigs(
 			ctx,
 			container,
 			t,
@@ -108,7 +109,7 @@ func (i *imageConfigReader) GetImageConfigs(
 			excludeSourceCodeInfo,
 		)
 	case buffetch.ModuleRef:
-		return i.GetSourceOrModuleImageConfigs(
+		return i.getSourceOrModuleImageConfigs(
 			ctx,
 			container,
 			t,
@@ -122,7 +123,7 @@ func (i *imageConfigReader) GetImageConfigs(
 	}
 }
 
-func (i *imageConfigReader) GetSourceOrModuleImageConfigs(
+func (i *imageConfigReader) getSourceOrModuleImageConfigs(
 	ctx context.Context,
 	container app.EnvStdinContainer,
 	sourceOrModuleRef buffetch.SourceOrModuleRef,
@@ -145,11 +146,27 @@ func (i *imageConfigReader) GetSourceOrModuleImageConfigs(
 	imageConfigs := make([]ImageConfig, 0, len(moduleConfigs))
 	var allFileAnnotations []bufanalysis.FileAnnotation
 	for _, moduleConfig := range moduleConfigs {
-		imageConfig, fileAnnotations, err := i.buildModule(
+		moduleFileSet, err := i.moduleFileSetBuilder.Build(
 			ctx,
 			moduleConfig.Module(),
+			bufmodulebuild.WithWorkspace(moduleConfig.Workspace()),
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		targetFileInfos, err := moduleFileSet.TargetFileInfos(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(targetFileInfos) == 0 {
+			// This ModuleFileSet doesn't have any targets, so we shouldn't build
+			// an image for it.
+			continue
+		}
+		imageConfig, fileAnnotations, err := i.buildModule(
+			ctx,
 			moduleConfig.Config(),
-			moduleConfig.Workspace(),
+			moduleFileSet,
 			excludeSourceCodeInfo,
 		)
 		if err != nil {
@@ -168,6 +185,9 @@ func (i *imageConfigReader) GetSourceOrModuleImageConfigs(
 			return nil, nil, err
 		}
 		return nil, deduplicated, nil
+	}
+	if len(imageConfigs) == 0 {
+		return nil, nil, errors.New("no .proto target files found")
 	}
 	return imageConfigs, nil, nil
 }
@@ -213,17 +233,12 @@ func (i *imageConfigReader) getImageImageConfig(
 
 func (i *imageConfigReader) buildModule(
 	ctx context.Context,
-	module bufmodule.Module,
 	config *bufconfig.Config,
-	workspace bufmodule.Workspace,
+	moduleFileSet bufmodule.ModuleFileSet,
 	excludeSourceCodeInfo bool,
 ) (ImageConfig, []bufanalysis.FileAnnotation, error) {
 	ctx, span := trace.StartSpan(ctx, "build_module")
 	defer span.End()
-	moduleFileSet, err := i.moduleFileSetBuilder.Build(ctx, module, bufmodulebuild.WithWorkspace(workspace))
-	if err != nil {
-		return nil, nil, err
-	}
 	var options []bufimagebuild.BuildOption
 	if excludeSourceCodeInfo {
 		options = append(options, bufimagebuild.WithExcludeSourceCodeInfo())
