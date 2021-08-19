@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/buf/internal/buf/bufcli"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
 	"github.com/bufbuild/buf/internal/buf/bufprint"
 	registryv1alpha1 "github.com/bufbuild/buf/internal/gen/proto/go/buf/alpha/registry/v1alpha1"
 	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
@@ -57,7 +57,7 @@ func NewCommand(
 			func(ctx context.Context, container appflag.Container) error {
 				return run(ctx, container, flags)
 			},
-			bufcli.NewErrorInterceptor(name),
+			bufcli.NewErrorInterceptor(),
 		),
 		BindFlags: flags.Bind,
 	}
@@ -82,9 +82,10 @@ func (f *flags) Bind(flagSet *pflag.FlagSet) {
 	flagSet.StringVar(
 		&f.Visibility,
 		visibilityFlagName,
-		publicVisibility,
+		"",
 		fmt.Sprintf(`The repository's visibility setting. Must be one of %s.`, stringutil.SliceToString(allVisibiltyStrings)),
 	)
+	_ = cobra.MarkFlagRequired(flagSet, visibilityFlagName)
 }
 
 func run(
@@ -100,6 +101,11 @@ func run(
 	if err != nil {
 		return appcmd.NewInvalidArgumentError(err.Error())
 	}
+	format, err := bufprint.ParseFormat(flags.Format)
+	if err != nil {
+		return appcmd.NewInvalidArgumentError(err.Error())
+	}
+
 	apiProvider, err := bufcli.NewRegistryProvider(ctx, container)
 	if err != nil {
 		return err
@@ -119,7 +125,11 @@ func run(
 		}
 		return err
 	}
-	return bufcli.PrintRepositories(ctx, apiProvider, moduleIdentity.Remote(), container.Stdout(), flags.Format, repository)
+	return bufprint.NewRepositoryPrinter(
+		apiProvider,
+		moduleIdentity.Remote(),
+		container.Stdout(),
+	).PrintRepository(ctx, format, repository)
 }
 
 // visibilityFlagToVisibility parses the given string as a registryv1alpha1.Visibility.

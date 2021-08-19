@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/buf/internal/buf/bufcli"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
+	"github.com/bufbuild/buf/internal/buf/bufmodule"
 	"github.com/bufbuild/buf/internal/buf/bufprint"
 	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
 	"github.com/bufbuild/buf/internal/pkg/app/appflag"
@@ -49,7 +49,7 @@ func NewCommand(
 			func(ctx context.Context, container appflag.Container) error {
 				return run(ctx, container, flags)
 			},
-			bufcli.NewErrorInterceptor(name),
+			bufcli.NewErrorInterceptor(),
 		),
 		BindFlags: flags.Bind,
 	}
@@ -75,7 +75,7 @@ func (f *flags) Bind(flagSet *pflag.FlagSet) {
 	flagSet.StringVar(&f.PageToken,
 		pageTokenFlagName,
 		"",
-		`The page token.`,
+		`The page token. If more results are available, a "next_page" key will be present in the --format=json output.`,
 	)
 	flagSet.BoolVar(&f.Reverse,
 		reverseFlagName,
@@ -102,6 +102,11 @@ func run(
 	if err != nil {
 		return appcmd.NewInvalidArgumentError(err.Error())
 	}
+	format, err := bufprint.ParseFormat(flags.Format)
+	if err != nil {
+		return appcmd.NewInvalidArgumentError(err.Error())
+	}
+
 	apiProvider, err := bufcli.NewRegistryProvider(ctx, container)
 	if err != nil {
 		return err
@@ -121,7 +126,7 @@ func run(
 	if err != nil {
 		return err
 	}
-	repositoryTags, _, err := repositoryTagService.ListRepositoryTags(
+	repositoryTags, nextPageToken, err := repositoryTagService.ListRepositoryTags(
 		ctx,
 		repository.Id,
 		flags.PageSize,
@@ -131,5 +136,5 @@ func run(
 	if err != nil {
 		return err
 	}
-	return bufcli.PrintRepositoryTags(ctx, container.Stdout(), flags.Format, repositoryTags...)
+	return bufprint.NewRepositoryTagPrinter(container.Stdout()).PrintRepositoryTags(ctx, format, nextPageToken, repositoryTags...)
 }
