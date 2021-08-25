@@ -20,16 +20,16 @@ package bufwire
 import (
 	"context"
 
-	"github.com/bufbuild/buf/internal/buf/bufanalysis"
 	"github.com/bufbuild/buf/internal/buf/bufconfig"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimagebuild"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/bufmodulebuild"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
 	"github.com/bufbuild/buf/internal/buf/bufwork"
-	"github.com/bufbuild/buf/internal/pkg/app"
-	"github.com/bufbuild/buf/internal/pkg/storage/storageos"
+	"github.com/bufbuild/buf/private/bufpkg/bufanalysis"
+	"github.com/bufbuild/buf/private/bufpkg/bufimage"
+	"github.com/bufbuild/buf/private/bufpkg/bufimage/bufimagebuild"
+	"github.com/bufbuild/buf/private/bufpkg/bufmodule"
+	"github.com/bufbuild/buf/private/bufpkg/bufmodule/bufmodulebuild"
+	"github.com/bufbuild/buf/private/pkg/app"
+	"github.com/bufbuild/buf/private/pkg/storage/storageos"
 	"go.uber.org/zap"
 )
 
@@ -48,16 +48,6 @@ type ImageConfigReader interface {
 		ctx context.Context,
 		container app.EnvStdinContainer,
 		ref buffetch.Ref,
-		configOverride string,
-		externalDirOrFilePaths []string,
-		externalDirOrFilePathsAllowNotExist bool,
-		excludeSourceCodeInfo bool,
-	) ([]ImageConfig, []bufanalysis.FileAnnotation, error)
-	// GetSourceOrModuleImageConfig is the same as GetImageConfig, but only allows source or module values, and always builds.
-	GetSourceOrModuleImageConfigs(
-		ctx context.Context,
-		container app.EnvStdinContainer,
-		sourceOrModuleRef buffetch.SourceOrModuleRef,
 		configOverride string,
 		externalDirOrFilePaths []string,
 		externalDirOrFilePathsAllowNotExist bool,

@@ -15,8 +15,8 @@
 package internal
 
 import (
-	"github.com/bufbuild/buf/internal/buf/bufanalysis"
-	"github.com/bufbuild/buf/internal/pkg/protosource"
+	"github.com/bufbuild/buf/private/bufpkg/bufanalysis"
+	"github.com/bufbuild/buf/private/pkg/protosource"
 )
 
 // RuleBuilder is a rule builder.

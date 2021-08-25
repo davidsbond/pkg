@@ -15,10 +15,12 @@
 package buflintcheck
 
 import (
-	"github.com/bufbuild/buf/internal/buf/bufanalysis"
+	"strings"
+
 	"github.com/bufbuild/buf/internal/buf/bufcheck/internal"
-	"github.com/bufbuild/buf/internal/pkg/protosource"
-	"github.com/bufbuild/buf/internal/pkg/stringutil"
+	"github.com/bufbuild/buf/private/bufpkg/bufanalysis"
+	"github.com/bufbuild/buf/private/pkg/protosource"
+	"github.com/bufbuild/buf/private/pkg/stringutil"
 )
 
 // addFunc adds a FileAnnotation.
@@ -38,6 +40,18 @@ func fieldToUpperSnakeCase(s string) string {
 	// We allow both effectively by not passing the option
 	//return stringutil.ToUpperSnakeCase(s, stringutil.SnakeCaseWithNewWordOnDigits())
 	return stringutil.ToUpperSnakeCase(s)
+}
+
+// validLeadingComment returns true if comment has at least one line that isn't empty
+// and doesn't start with CommentIgnorePrefix.
+func validLeadingComment(comment string) bool {
+	for _, line := range strings.Split(comment, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, CommentIgnorePrefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func newFilesCheckFunc(

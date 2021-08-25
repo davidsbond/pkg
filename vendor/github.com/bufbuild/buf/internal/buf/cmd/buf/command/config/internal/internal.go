@@ -18,8 +18,8 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/buf/internal/buf/bufcheck"
-	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
-	"github.com/bufbuild/buf/internal/pkg/stringutil"
+	"github.com/bufbuild/buf/internal/buf/bufconfig"
+	"github.com/bufbuild/buf/private/pkg/stringutil"
 	"github.com/spf13/pflag"
 )
 
@@ -34,14 +34,15 @@ func BindLSRulesAll(flagSet *pflag.FlagSet, addr *bool, flagName string) {
 }
 
 // BindLSRulesConfig binds the config flag for an ls rules command.
-func BindLSRulesConfig(flagSet *pflag.FlagSet, addr *string, flagName string, allFlagName string) {
+func BindLSRulesConfig(flagSet *pflag.FlagSet, addr *string, flagName string, allFlagName string, versionFlagName string) {
 	flagSet.StringVar(
 		addr,
 		flagName,
 		"",
 		fmt.Sprintf(
-			`The config file or data to use. If --%s is specified, this is ignored.`,
+			`The config file or data to use. If --%s or --%s are specified, this is ignored.`,
 			allFlagName,
+			versionFlagName,
 		),
 	)
 }
@@ -59,21 +60,16 @@ func BindLSRulesFormat(flagSet *pflag.FlagSet, addr *string, flagName string) {
 	)
 }
 
-// BindLSRulesCategories binds the categories flag for an ls rules command.
-func BindLSRulesCategories(flagSet *pflag.FlagSet, addr *[]string, flagName string) {
-	flagSet.StringSliceVar(
+// BindLSRulesVersion binds the version flag for an ls rules command.
+func BindLSRulesVersion(flagSet *pflag.FlagSet, addr *string, flagName string, allFlagName string) {
+	flagSet.StringVar(
 		addr,
 		flagName,
-		nil,
-		"Only list the rules in these categories.",
+		"",
+		fmt.Sprintf(
+			"List all the rules for the given configuration version. Implies --%s. Must be one of %s.",
+			allFlagName,
+			stringutil.SliceToString(bufconfig.AllVersions),
+		),
 	)
-	_ = flagSet.MarkHidden(flagName)
-}
-
-// CheckLSRulesCategories checks that value is empty as this flag is deprecated.
-func CheckLSRulesCategories(value []string, flagName string) error {
-	if len(value) > 0 {
-		return appcmd.NewInvalidArgumentErrorf("Flag --%s has been removed in v0.26.0 in preparation for v1.0. This flag is difficult to reconcile with the concept of configuration versions. If filtering by category is necessary, print in JSON format and filter.", flagName)
-	}
-	return nil
 }

@@ -21,16 +21,14 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/bufbuild/buf/internal/pkg/encoding"
-	"github.com/bufbuild/buf/internal/pkg/normalpath"
-	"github.com/bufbuild/buf/internal/pkg/storage"
-	"github.com/bufbuild/buf/internal/pkg/stringutil"
+	"github.com/bufbuild/buf/private/pkg/encoding"
+	"github.com/bufbuild/buf/private/pkg/normalpath"
+	"github.com/bufbuild/buf/private/pkg/storage"
+	"github.com/bufbuild/buf/private/pkg/stringutil"
 	"go.opencensus.io/trace"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
-
-const v1beta1Version = "v1beta1"
 
 type provider struct {
 	logger *zap.Logger
@@ -46,28 +44,48 @@ func (p *provider) GetConfig(ctx context.Context, readBucket storage.ReadBucket,
 	ctx, span := trace.StartSpan(ctx, "get_config")
 	defer span.End()
 
-	readObjectCloser, err := readBucket.Get(ctx, ExternalConfigV1Beta1FilePath)
-	if err != nil {
-		if storage.IsNotExist(err) {
-			return p.newConfigV1Beta1(externalConfigV1Beta1{}, "default configuration")
+	// This will be in the order of precedence.
+	var foundConfigFilePaths []string
+	// Go through all valid config file paths and see which ones are present.
+	// If none are present, return the default config.
+	// If multiple are present, error.
+	for _, configFilePath := range AllConfigFilePaths {
+		exists, err := storage.Exists(ctx, readBucket, configFilePath)
+		if err != nil {
+			return nil, err
 		}
-		return nil, err
+		if exists {
+			foundConfigFilePaths = append(foundConfigFilePaths, configFilePath)
+		}
 	}
-	defer func() {
-		retErr = multierr.Append(retErr, readObjectCloser.Close())
-	}()
-	data, err := io.ReadAll(readObjectCloser)
-	if err != nil {
-		return nil, err
+	switch len(foundConfigFilePaths) {
+	case 0:
+		// Did not find anything, return the default.
+		return p.newConfigV1(ExternalConfigV1{}, "default configuration")
+	case 1:
+		workspaceID := filepath.Join(normalpath.Unnormalize(relativeRootPath), foundConfigFilePaths[0])
+		readObjectCloser, err := readBucket.Get(ctx, foundConfigFilePaths[0])
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			retErr = multierr.Append(retErr, readObjectCloser.Close())
+		}()
+		data, err := io.ReadAll(readObjectCloser)
+		if err != nil {
+			return nil, err
+		}
+		return p.getConfigForData(
+			ctx,
+			encoding.UnmarshalYAMLNonStrict,
+			encoding.UnmarshalYAMLStrict,
+			workspaceID,
+			data,
+			readObjectCloser.ExternalPath(),
+		)
+	default:
+		return nil, fmt.Errorf("only one workspace file can exist but found multiple workspace files: %s", stringutil.SliceToString(foundConfigFilePaths))
 	}
-	return p.getConfigForData(
-		ctx,
-		encoding.UnmarshalYAMLNonStrict,
-		encoding.UnmarshalYAMLStrict,
-		filepath.Join(normalpath.Unnormalize(relativeRootPath), ExternalConfigV1Beta1FilePath),
-		data,
-		`File "`+readObjectCloser.ExternalPath()+`"`,
-	)
 }
 
 func (p *provider) GetConfigForData(ctx context.Context, data []byte) (*Config, error) {
@@ -98,30 +116,29 @@ func (p *provider) getConfigForData(
 	if err := p.validateExternalConfigVersion(externalConfigVersion, id); err != nil {
 		return nil, err
 	}
-	var externalConfigV1Beta1 externalConfigV1Beta1
-	if err := unmarshalStrict(data, &externalConfigV1Beta1); err != nil {
+	var externalConfigV1 ExternalConfigV1
+	if err := unmarshalStrict(data, &externalConfigV1); err != nil {
 		return nil, err
 	}
-	return p.newConfigV1Beta1(externalConfigV1Beta1, workspaceID)
+	return p.newConfigV1(externalConfigV1, workspaceID)
 }
 
-func (p *provider) newConfigV1Beta1(externalConfig externalConfigV1Beta1, workspaceID string) (*Config, error) {
+func (p *provider) newConfigV1(externalConfig ExternalConfigV1, workspaceID string) (*Config, error) {
+	if len(externalConfig.Directories) == 0 {
+		return nil, fmt.Errorf(
+			`%s has no directories set. Please add "directories: [...]"`,
+			workspaceID,
+		)
+	}
 	directorySet := make(map[string]struct{}, len(externalConfig.Directories))
 	for _, directory := range externalConfig.Directories {
-		if filepath.IsAbs(directory) {
-			return nil, fmt.Errorf(
-				"module %q listed in %s must be a relative path",
-				normalpath.Unnormalize(directory),
-				workspaceID,
-			)
-		}
 		normalizedDirectory, err := normalpath.NormalizeAndValidate(directory)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf(`directory "%s" listed in %s is invalid: %w`, normalpath.Unnormalize(directory), workspaceID, err)
 		}
 		if _, ok := directorySet[normalizedDirectory]; ok {
 			return nil, fmt.Errorf(
-				"module %q is listed more than once in %s",
+				`directory "%s" is listed more than once in %s`,
 				normalpath.Unnormalize(normalizedDirectory),
 				workspaceID,
 			)
@@ -151,20 +168,18 @@ func validateConfigurationOverlap(directories []string, workspaceID string) erro
 			right := directories[j]
 			if normalpath.ContainsPath(left, right, normalpath.Relative) {
 				return fmt.Errorf(
-					"module %q contains module %q in %s; see %s for more details",
+					`directory "%s" contains directory "%s" in %s`,
 					normalpath.Unnormalize(left),
 					normalpath.Unnormalize(right),
 					workspaceID,
-					faqPage,
 				)
 			}
 			if normalpath.ContainsPath(right, left, normalpath.Relative) {
 				return fmt.Errorf(
-					"module %q contains module %q in %s; see %s for more details",
+					`directory "%s" contains directory "%s" in %s`,
 					normalpath.Unnormalize(right),
 					normalpath.Unnormalize(left),
 					workspaceID,
-					faqPage,
 				)
 			}
 		}
@@ -175,11 +190,19 @@ func validateConfigurationOverlap(directories []string, workspaceID string) erro
 func (p *provider) validateExternalConfigVersion(externalConfigVersion externalConfigVersion, id string) error {
 	switch externalConfigVersion.Version {
 	case "":
-		p.logger.Sugar().Warnf(`%s has no version set. Please add "version: %s". See https://docs.buf.build/faq for more details.`, id, v1beta1Version)
-		return nil
-	case v1beta1Version:
+		return fmt.Errorf(
+			`%s has no version set. Please add "version: %s"`,
+			id,
+			V1Version,
+		)
+	case V1Version:
 		return nil
 	default:
-		return fmt.Errorf("%s has unknown configuration version: %s", id, externalConfigVersion.Version)
+		return fmt.Errorf(
+			`%s has an invalid "version: %s" set. Please add "version: %s"`,
+			id,
+			externalConfigVersion.Version,
+			V1Version,
+		)
 	}
 }

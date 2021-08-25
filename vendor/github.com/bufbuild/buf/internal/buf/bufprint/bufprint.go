@@ -20,10 +20,10 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/bufbuild/buf/internal/gen/proto/apiclient/buf/alpha/registry/v1alpha1/registryv1alpha1apiclient"
-	registryv1alpha1 "github.com/bufbuild/buf/internal/gen/proto/go/buf/alpha/registry/v1alpha1"
-	"github.com/bufbuild/buf/internal/pkg/protoencoding"
-	"github.com/bufbuild/buf/internal/pkg/stringutil"
+	"github.com/bufbuild/buf/private/gen/proto/apiclient/buf/alpha/registry/v1alpha1/registryv1alpha1apiclient"
+	registryv1alpha1 "github.com/bufbuild/buf/private/gen/proto/go/buf/alpha/registry/v1alpha1"
+	"github.com/bufbuild/buf/private/pkg/protoencoding"
+	"github.com/bufbuild/buf/private/pkg/stringutil"
 	"go.uber.org/multierr"
 	"google.golang.org/protobuf/proto"
 )
@@ -69,47 +69,20 @@ func (f Format) String() string {
 	}
 }
 
-// UserPrinter is a user printer.
-type UserPrinter interface {
-	PrintUsers(ctx context.Context, users ...*registryv1alpha1.User) error
-}
-
-// NewUserPrinter returns a new UserPrinter.
-func NewUserPrinter(writer io.Writer, format Format) (UserPrinter, error) {
-	switch format {
-	case FormatText:
-		return newTextUserPrinter(writer), nil
-	case FormatJSON:
-		return newJSONUserPrinter(writer), nil
-	default:
-		return nil, fmt.Errorf("unknown format: %v", format)
-	}
-}
-
 // OrganizationPrinter is an organization printer.
 type OrganizationPrinter interface {
-	PrintOrganizations(ctx context.Context, organizations ...*registryv1alpha1.Organization) error
+	PrintOrganization(ctx context.Context, format Format, organization *registryv1alpha1.Organization) error
 }
 
 // NewOrganizationPrinter returns a new OrganizationPrinter.
-func NewOrganizationPrinter(
-	address string,
-	writer io.Writer,
-	format Format,
-) (OrganizationPrinter, error) {
-	switch format {
-	case FormatText:
-		return newOrganizationPrinter(address, writer, false), nil
-	case FormatJSON:
-		return newOrganizationPrinter(address, writer, true), nil
-	default:
-		return nil, fmt.Errorf("unknown format: %v", format)
-	}
+func NewOrganizationPrinter(address string, writer io.Writer) OrganizationPrinter {
+	return newOrganizationPrinter(address, writer)
 }
 
 // RepositoryPrinter is a repository printer.
 type RepositoryPrinter interface {
-	PrintRepositories(ctx context.Context, repositories ...*registryv1alpha1.Repository) error
+	PrintRepository(ctx context.Context, format Format, repository *registryv1alpha1.Repository) error
+	PrintRepositories(ctx context.Context, format Format, nextPageToken string, repositories ...*registryv1alpha1.Repository) error
 }
 
 // NewRepositoryPrinter returns a new RepositoryPrinter.
@@ -117,62 +90,105 @@ func NewRepositoryPrinter(
 	apiProvider registryv1alpha1apiclient.Provider,
 	address string,
 	writer io.Writer,
-	format Format,
-) (RepositoryPrinter, error) {
-	switch format {
-	case FormatText:
-		return newRepositoryPrinter(apiProvider, address, writer, false), nil
-	case FormatJSON:
-		return newRepositoryPrinter(apiProvider, address, writer, true), nil
-	default:
-		return nil, fmt.Errorf("unknown format: %v", format)
-	}
+) RepositoryPrinter {
+	return newRepositoryPrinter(apiProvider, address, writer)
 }
 
 // RepositoryBranchPrinter is a repository branch printer.
 type RepositoryBranchPrinter interface {
-	PrintRepositoryBranches(ctx context.Context, repositoryBranches ...*registryv1alpha1.RepositoryBranch) error
+	PrintRepositoryBranch(ctx context.Context, format Format, repositoryBranch *registryv1alpha1.RepositoryBranch) error
+	PrintRepositoryBranches(ctx context.Context, format Format, nextPageToken string, repositoryBranches ...*registryv1alpha1.RepositoryBranch) error
 }
 
 // NewRepositoryBranchPrinter returns a new RepositoryBranchPrinter.
-func NewRepositoryBranchPrinter(writer io.Writer, format Format) (RepositoryBranchPrinter, error) {
-	switch format {
-	case FormatText:
-		return newRepositoryBranchPrinter(writer, false), nil
-	case FormatJSON:
-		return newRepositoryBranchPrinter(writer, true), nil
-	default:
-		return nil, fmt.Errorf("unknown format: %v", format)
-	}
+func NewRepositoryBranchPrinter(writer io.Writer) RepositoryBranchPrinter {
+	return newRepositoryBranchPrinter(writer)
 }
 
 // RepositoryTagPrinter is a repository tag printer.
 type RepositoryTagPrinter interface {
-	PrintRepositoryTags(ctx context.Context, repositoryTags ...*registryv1alpha1.RepositoryTag) error
+	PrintRepositoryTag(ctx context.Context, format Format, repositoryTag *registryv1alpha1.RepositoryTag) error
+	PrintRepositoryTags(ctx context.Context, format Format, nextPageToken string, repositoryTags ...*registryv1alpha1.RepositoryTag) error
 }
 
 // NewRepositoryTagPrinter returns a new RepositoryTagPrinter.
-func NewRepositoryTagPrinter(writer io.Writer, format Format) (RepositoryTagPrinter, error) {
+func NewRepositoryTagPrinter(writer io.Writer) RepositoryTagPrinter {
+	return newRepositoryTagPrinter(writer)
+}
+
+// RepositoryCommitPrinter is a repository commit printer.
+type RepositoryCommitPrinter interface {
+	PrintRepositoryCommit(ctx context.Context, format Format, repositoryCommit *registryv1alpha1.RepositoryCommit) error
+	PrintRepositoryCommits(ctx context.Context, format Format, nextPageToken string, repositoryCommits ...*registryv1alpha1.RepositoryCommit) error
+}
+
+// NewRepositoryCommitPrinter returns a new RepositoryCommitPrinter.
+func NewRepositoryCommitPrinter(writer io.Writer) RepositoryCommitPrinter {
+	return newRepositoryCommitPrinter(writer)
+}
+
+// PluginPrinter is a printer for plugins.
+type PluginPrinter interface {
+	PrintPlugin(ctx context.Context, format Format, plugin *registryv1alpha1.Plugin) error
+	PrintPlugins(ctx context.Context, format Format, nextPageToken string, plugins ...*registryv1alpha1.Plugin) error
+}
+
+// NewPluginPrinter returns a new PluginPrinter.
+func NewPluginPrinter(writer io.Writer) PluginPrinter {
+	return newPluginPrinter(writer)
+}
+
+// PluginVersionPrinter is a printer for PluginVersions.
+type PluginVersionPrinter interface {
+	PrintPluginVersions(ctx context.Context, format Format, nextPageToken string, plugins ...*registryv1alpha1.PluginVersion) error
+}
+
+// NewPluginVersionPrinter returns a new NewPluginVersionPrinter.
+func NewPluginVersionPrinter(writer io.Writer) PluginVersionPrinter {
+	return newPluginVersionPrinter(writer)
+}
+
+// TemplatePrinter is a printer for Templates.
+type TemplatePrinter interface {
+	PrintTemplate(ctx context.Context, format Format, plugin *registryv1alpha1.Template) error
+	PrintTemplates(ctx context.Context, format Format, nextPageToken string, plugins ...*registryv1alpha1.Template) error
+}
+
+// NewTemplatePrinter returns a new NewTemplatePrinter.
+func NewTemplatePrinter(writer io.Writer) TemplatePrinter {
+	return newTemplatePrinter(writer)
+}
+
+// TemplateVersionPrinter is a printer for TemplateVersions.
+type TemplateVersionPrinter interface {
+	PrintTemplateVersion(ctx context.Context, format Format, plugin *registryv1alpha1.TemplateVersion) error
+	PrintTemplateVersions(ctx context.Context, format Format, nextPageToken string, plugins ...*registryv1alpha1.TemplateVersion) error
+}
+
+// NewTemplateVersionPrinter returns a new NewTemplateVersionPrinter.
+func NewTemplateVersionPrinter(writer io.Writer) TemplateVersionPrinter {
+	return newTemplateVersionPrinter(writer)
+}
+
+// TokenPrinter is a printer Tokens.
+//
+// TODO: update to same format as other printers.
+type TokenPrinter interface {
+	PrintTokens(ctx context.Context, tokens ...*registryv1alpha1.Token) error
+}
+
+// NewTokenPrinter returns a new TokenPrinter.
+//
+// TODO: update to same format as other printers.
+func NewTokenPrinter(writer io.Writer, format Format) (TokenPrinter, error) {
 	switch format {
 	case FormatText:
-		return newRepositoryTagPrinter(writer, false), nil
+		return newTokenTextPrinter(writer), nil
 	case FormatJSON:
-		return newRepositoryTagPrinter(writer, true), nil
+		return newTokenJSONPrinter(writer), nil
 	default:
 		return nil, fmt.Errorf("unknown format: %v", format)
 	}
-}
-
-// PrintProtoMessageJSON prints the Protobuf message as JSON.
-//
-// Shared with internal packages.
-func PrintProtoMessageJSON(writer io.Writer, message proto.Message) error {
-	data, err := protoencoding.NewJSONMarshalerIndent(nil).Marshal(message)
-	if err != nil {
-		return err
-	}
-	_, err = writer.Write(append(data, []byte("\n")...))
-	return err
 }
 
 // TabWriter is a tab writer.
@@ -196,4 +212,14 @@ func WithTabWriter(
 		return err
 	}
 	return f(tabWriter)
+}
+
+// printProtoMessageJSON prints the Protobuf message as JSON.
+func printProtoMessageJSON(writer io.Writer, message proto.Message) error {
+	data, err := protoencoding.NewJSONMarshalerIndent(nil).Marshal(message)
+	if err != nil {
+		return err
+	}
+	_, err = writer.Write(append(data, []byte("\n")...))
+	return err
 }

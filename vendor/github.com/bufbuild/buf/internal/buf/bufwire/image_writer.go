@@ -18,10 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
-	"github.com/bufbuild/buf/internal/pkg/app"
-	"github.com/bufbuild/buf/internal/pkg/protoencoding"
+	"github.com/bufbuild/buf/private/bufpkg/bufimage"
+	"github.com/bufbuild/buf/private/pkg/app"
+	"github.com/bufbuild/buf/private/pkg/protoencoding"
 	"go.opencensus.io/trace"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
@@ -96,7 +96,7 @@ func (i *imageWriter) imageMarshal(
 	case buffetch.ImageEncodingJSON:
 		// TODO: verify that image is complete
 		resolver, err := protoencoding.NewResolver(
-			bufimage.ImageToFileDescriptorProtos(
+			bufimage.ImageToFileDescriptors(
 				image,
 			)...,
 		)

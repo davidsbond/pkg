@@ -18,10 +18,10 @@ package buflintbuild
 import (
 	"errors"
 
-	"github.com/bufbuild/buf/internal/buf/bufanalysis"
 	"github.com/bufbuild/buf/internal/buf/bufcheck/buflint/internal/buflintcheck"
 	"github.com/bufbuild/buf/internal/buf/bufcheck/internal"
-	"github.com/bufbuild/buf/internal/pkg/protosource"
+	"github.com/bufbuild/buf/private/bufpkg/bufanalysis"
+	"github.com/bufbuild/buf/private/pkg/protosource"
 )
 
 var (
@@ -150,6 +150,12 @@ var (
 		"IMPORT_NO_WEAK",
 		"imports are not weak",
 		newAdapter(buflintcheck.CheckImportNoWeak),
+	)
+	// ImportUsedRuleBuilder is a rule builder.
+	ImportUsedRuleBuilder = internal.NewNopRuleBuilder(
+		"IMPORT_USED",
+		"imports are used",
+		newAdapter(buflintcheck.CheckImportUsed),
 	)
 	// MessagePascalCaseRuleBuilder is a rule builder.
 	MessagePascalCaseRuleBuilder = internal.NewNopRuleBuilder(
@@ -329,6 +335,12 @@ var (
 				return buflintcheck.CheckServiceSuffix(id, ignoreFunc, files, configBuilder.ServiceSuffix)
 			}), nil
 		},
+	)
+	// SyntaxSpecifiedRuleBuilder is a rule builder.
+	SyntaxSpecifiedRuleBuilder = internal.NewNopRuleBuilder(
+		"SYNTAX_SPECIFIED",
+		"all files have a syntax specified",
+		newAdapter(buflintcheck.CheckSyntaxSpecified),
 	)
 )
 

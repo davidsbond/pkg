@@ -20,9 +20,9 @@ import (
 
 	"github.com/bufbuild/buf/internal/buf/bufcli"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
-	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
-	"github.com/bufbuild/buf/internal/pkg/app/appflag"
-	"github.com/bufbuild/buf/internal/pkg/storage/storageos"
+	"github.com/bufbuild/buf/private/pkg/app/appcmd"
+	"github.com/bufbuild/buf/private/pkg/app/appflag"
+	"github.com/bufbuild/buf/private/pkg/storage/storageos"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -107,12 +107,10 @@ func (f *flags) Bind(flagSet *pflag.FlagSet) {
 			buffetch.ImageFormatsString,
 		),
 	)
+	_ = cobra.MarkFlagRequired(flagSet, outputFlagName)
 }
 
 func run(ctx context.Context, container appflag.Container, flags *flags) (retErr error) {
-	if flags.Output == "" {
-		return bufcli.NewFlagIsRequiredError(outputFlagName)
-	}
 	paths, err := bufcli.GetStringSliceFlagOrDeprecatedFlag(
 		flags.Paths,
 		pathsFlagName,

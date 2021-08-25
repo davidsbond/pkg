@@ -18,17 +18,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bufbuild/buf/internal/buf/bufanalysis"
 	"github.com/bufbuild/buf/internal/buf/bufcheck/buflint"
 	"github.com/bufbuild/buf/internal/buf/bufcli"
-	"github.com/bufbuild/buf/internal/buf/bufconfig"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
-	"github.com/bufbuild/buf/internal/buf/bufwork"
-	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
-	"github.com/bufbuild/buf/internal/pkg/app/appflag"
-	"github.com/bufbuild/buf/internal/pkg/storage/storageos"
-	"github.com/bufbuild/buf/internal/pkg/stringutil"
+	"github.com/bufbuild/buf/private/bufpkg/bufanalysis"
+	"github.com/bufbuild/buf/private/bufpkg/bufimage"
+	"github.com/bufbuild/buf/private/pkg/app/appcmd"
+	"github.com/bufbuild/buf/private/pkg/app/appflag"
+	"github.com/bufbuild/buf/private/pkg/storage/storageos"
+	"github.com/bufbuild/buf/private/pkg/stringutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -50,7 +48,6 @@ const (
 func NewCommand(
 	name string,
 	builder appflag.Builder,
-	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
 	deprecated string,
 	hidden bool,
 ) *appcmd.Command {
@@ -64,9 +61,9 @@ func NewCommand(
 		Hidden:     hidden,
 		Run: builder.NewRunFunc(
 			func(ctx context.Context, container appflag.Container) error {
-				return run(ctx, container, flags, moduleResolverReaderProvider)
+				return run(ctx, container, flags)
 			},
-			bufcli.NewErrorInterceptor(name),
+			bufcli.NewErrorInterceptor(),
 		),
 		BindFlags: flags.Bind,
 	}
@@ -143,8 +140,10 @@ func run(
 	ctx context.Context,
 	container appflag.Container,
 	flags *flags,
-	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
 ) (retErr error) {
+	if err := bufcli.ValidateErrorFormatFlagLint(flags.ErrorFormat, errorFormatFlagName); err != nil {
+		return err
+	}
 	input, err := bufcli.GetInputValue(container, flags.InputHashtag, flags.Input, inputFlagName, ".")
 	if err != nil {
 		return err
@@ -171,25 +170,20 @@ func run(
 	if err != nil {
 		return err
 	}
-	configProvider := bufconfig.NewProvider(container.Logger())
-	workspaceConfigProvider := bufwork.NewProvider(container.Logger())
-	moduleResolver, err := moduleResolverReaderProvider.GetModuleResolver(ctx, container)
-	if err != nil {
-		return err
-	}
-	moduleReader, err := moduleResolverReaderProvider.GetModuleReader(ctx, container)
-	if err != nil {
-		return err
-	}
 	storageosProvider := storageos.NewProvider(storageos.ProviderWithSymlinks())
-	imageConfigs, fileAnnotations, err := bufcli.NewWireImageConfigReader(
-		container.Logger(),
+	registryProvider, err := bufcli.NewRegistryProvider(ctx, container)
+	if err != nil {
+		return err
+	}
+	imageConfigReader, err := bufcli.NewWireImageConfigReader(
+		container,
 		storageosProvider,
-		configProvider,
-		workspaceConfigProvider,
-		moduleResolver,
-		moduleReader,
-	).GetImageConfigs(
+		registryProvider,
+	)
+	if err != nil {
+		return err
+	}
+	imageConfigs, fileAnnotations, err := imageConfigReader.GetImageConfigs(
 		ctx,
 		container,
 		ref,

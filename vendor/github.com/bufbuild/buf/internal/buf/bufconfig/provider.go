@@ -21,16 +21,15 @@ import (
 
 	"github.com/bufbuild/buf/internal/buf/bufcheck/bufbreaking"
 	"github.com/bufbuild/buf/internal/buf/bufcheck/buflint"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/bufmodulebuild"
-	"github.com/bufbuild/buf/internal/pkg/encoding"
-	"github.com/bufbuild/buf/internal/pkg/storage"
+	"github.com/bufbuild/buf/private/bufpkg/bufmodule"
+	"github.com/bufbuild/buf/private/bufpkg/bufmodule/bufmodulebuild"
+	"github.com/bufbuild/buf/private/pkg/encoding"
+	"github.com/bufbuild/buf/private/pkg/storage"
+	"github.com/bufbuild/buf/private/pkg/stringutil"
 	"go.opencensus.io/trace"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
-
-const v1beta1Version = "v1beta1"
 
 type provider struct {
 	logger *zap.Logger
@@ -46,27 +45,47 @@ func (p *provider) GetConfig(ctx context.Context, readBucket storage.ReadBucket)
 	ctx, span := trace.StartSpan(ctx, "get_config")
 	defer span.End()
 
-	readObjectCloser, err := readBucket.Get(ctx, ExternalConfigV1Beta1FilePath)
-	if err != nil {
-		if storage.IsNotExist(err) {
-			return p.newConfigV1Beta1(externalConfigV1Beta1{})
+	// This will be in the order of precedence.
+	var foundConfigFilePaths []string
+	// Go through all valid config file paths and see which ones are present.
+	// If none are present, return the default config.
+	// If multiple are present, error.
+	for _, configFilePath := range allConfigFilePaths {
+		exists, err := storage.Exists(ctx, readBucket, configFilePath)
+		if err != nil {
+			return nil, err
 		}
-		return nil, err
+		if exists {
+			foundConfigFilePaths = append(foundConfigFilePaths, configFilePath)
+		}
 	}
-	defer func() {
-		retErr = multierr.Append(retErr, readObjectCloser.Close())
-	}()
-	data, err := io.ReadAll(readObjectCloser)
-	if err != nil {
-		return nil, err
+	switch len(foundConfigFilePaths) {
+	case 0:
+		// Did not find anything, return the default.
+		// TODO: change to V1 when we make V1 the default
+		return p.newConfigV1Beta1(ExternalConfigV1Beta1{})
+	case 1:
+		readObjectCloser, err := readBucket.Get(ctx, foundConfigFilePaths[0])
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			retErr = multierr.Append(retErr, readObjectCloser.Close())
+		}()
+		data, err := io.ReadAll(readObjectCloser)
+		if err != nil {
+			return nil, err
+		}
+		return p.getConfigForData(
+			ctx,
+			encoding.UnmarshalYAMLNonStrict,
+			encoding.UnmarshalYAMLStrict,
+			data,
+			readObjectCloser.ExternalPath(),
+		)
+	default:
+		return nil, fmt.Errorf("only one configuration file can exist but found multiple configuration files: %s", stringutil.SliceToString(foundConfigFilePaths))
 	}
-	return p.getConfigForData(
-		ctx,
-		encoding.UnmarshalYAMLNonStrict,
-		encoding.UnmarshalYAMLStrict,
-		data,
-		`File "`+readObjectCloser.ExternalPath()+`"`,
-	)
 }
 
 func (p *provider) GetConfigForData(ctx context.Context, data []byte) (*Config, error) {
@@ -88,21 +107,43 @@ func (p *provider) getConfigForData(
 	data []byte,
 	id string,
 ) (*Config, error) {
-	var externalConfigVersion externalConfigVersion
+	var externalConfigVersion ExternalConfigVersion
 	if err := unmarshalNonStrict(data, &externalConfigVersion); err != nil {
 		return nil, err
 	}
-	if err := p.validateExternalConfigVersion(externalConfigVersion, id); err != nil {
-		return nil, err
+	switch externalConfigVersion.Version {
+	case "":
+		// If a version is not specified, use the default v1beta1 configuration
+		// to maintain compatibility with previous releases.
+		p.logger.Sugar().Warnf(`%s has no version set. Please add "version: %s". See https://docs.buf.build/faq for more details.`, id, V1Beta1Version)
+		var externalConfigV1Beta1 ExternalConfigV1Beta1
+		if err := unmarshalStrict(data, &externalConfigV1Beta1); err != nil {
+			return nil, err
+		}
+		return p.newConfigV1Beta1(externalConfigV1Beta1)
+	case V1Beta1Version:
+		var externalConfigV1Beta1 ExternalConfigV1Beta1
+		if err := unmarshalStrict(data, &externalConfigV1Beta1); err != nil {
+			return nil, err
+		}
+		return p.newConfigV1Beta1(externalConfigV1Beta1)
+	case V1Version:
+		var externalConfigV1 ExternalConfigV1
+		if err := unmarshalStrict(data, &externalConfigV1); err != nil {
+			return nil, err
+		}
+		return p.newConfigV1(externalConfigV1)
+	default:
+		return nil, fmt.Errorf(
+			`%s has an invalid "version: %s" set. Please add "version: %s". See https://docs.buf.build/faq for more details`,
+			id,
+			externalConfigVersion.Version,
+			V1Version,
+		)
 	}
-	var externalConfigV1Beta1 externalConfigV1Beta1
-	if err := unmarshalStrict(data, &externalConfigV1Beta1); err != nil {
-		return nil, err
-	}
-	return p.newConfigV1Beta1(externalConfigV1Beta1)
 }
 
-func (p *provider) newConfigV1Beta1(externalConfig externalConfigV1Beta1) (*Config, error) {
+func (p *provider) newConfigV1Beta1(externalConfig ExternalConfigV1Beta1) (*Config, error) {
 	buildConfig, err := bufmodulebuild.NewConfigV1Beta1(externalConfig.Build, externalConfig.Deps...)
 	if err != nil {
 		return nil, err
@@ -123,6 +164,7 @@ func (p *provider) newConfigV1Beta1(externalConfig externalConfigV1Beta1) (*Conf
 		}
 	}
 	return &Config{
+		Version:        V1Beta1Version,
 		ModuleIdentity: moduleIdentity,
 		Build:          buildConfig,
 		Breaking:       breakingConfig,
@@ -130,14 +172,31 @@ func (p *provider) newConfigV1Beta1(externalConfig externalConfigV1Beta1) (*Conf
 	}, nil
 }
 
-func (p *provider) validateExternalConfigVersion(externalConfigVersion externalConfigVersion, id string) error {
-	switch externalConfigVersion.Version {
-	case "":
-		p.logger.Sugar().Warnf(`%s has no version set. Please add "version: %s". See https://docs.buf.build/faq for more details.`, id, v1beta1Version)
-		return nil
-	case v1beta1Version:
-		return nil
-	default:
-		return fmt.Errorf("%s has unknown configuration version: %s", id, externalConfigVersion.Version)
+func (p *provider) newConfigV1(externalConfig ExternalConfigV1) (*Config, error) {
+	buildConfig, err := bufmodulebuild.NewConfigV1(externalConfig.Build, externalConfig.Deps...)
+	if err != nil {
+		return nil, err
 	}
+	breakingConfig, err := bufbreaking.NewConfigV1(externalConfig.Breaking)
+	if err != nil {
+		return nil, err
+	}
+	lintConfig, err := buflint.NewConfigV1(externalConfig.Lint)
+	if err != nil {
+		return nil, err
+	}
+	var moduleIdentity bufmodule.ModuleIdentity
+	if externalConfig.Name != "" {
+		moduleIdentity, err = bufmodule.ModuleIdentityForString(externalConfig.Name)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &Config{
+		Version:        V1Version,
+		ModuleIdentity: moduleIdentity,
+		Build:          buildConfig,
+		Breaking:       breakingConfig,
+		Lint:           lintConfig,
+	}, nil
 }

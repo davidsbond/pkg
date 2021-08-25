@@ -21,12 +21,11 @@ import (
 	"path/filepath"
 
 	"github.com/bufbuild/buf/internal/buf/bufconfig"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
-	"github.com/bufbuild/buf/internal/pkg/normalpath"
-	"github.com/bufbuild/buf/internal/pkg/storage"
+	"github.com/bufbuild/buf/private/bufpkg/bufmodule"
+	"github.com/bufbuild/buf/private/bufpkg/bufmodule/bufmodulebuild"
+	"github.com/bufbuild/buf/private/pkg/normalpath"
+	"github.com/bufbuild/buf/private/pkg/storage"
 )
-
-const faqPage = "https://docs.buf.build/faq"
 
 type workspace struct {
 	// bufmodule.ModuleIdentity -> bufmodule.Module
@@ -36,19 +35,26 @@ type workspace struct {
 
 func newWorkspace(
 	ctx context.Context,
-	config *Config,
+	workspaceConfig *Config,
 	readBucket storage.ReadBucket,
 	configProvider bufconfig.Provider,
+	moduleBucketBuilder bufmodulebuild.ModuleBucketBuilder,
 	relativeRootPath string,
 	targetSubDirPath string,
+	configOverride string,
+	externalDirOrFilePaths []string,
+	externalDirOrFilePathsAllowNotExist bool,
 ) (*workspace, error) {
-	if config == nil {
+	if workspaceConfig == nil {
 		return nil, errors.New("received a nil workspace config")
 	}
-	workspaceID := filepath.Join(normalpath.Unnormalize(relativeRootPath), ExternalConfigV1Beta1FilePath)
-	namedModules := make(map[string]bufmodule.Module, len(config.Directories))
-	allModules := make([]bufmodule.Module, 0, len(config.Directories))
-	for _, directory := range config.Directories {
+	// We know that if the file is actually buf.work for legacy reasons, this will be wrong,
+	// but we accept that as this shouldn't happen often anymore and this is just
+	// used for error messages.
+	workspaceID := filepath.Join(normalpath.Unnormalize(relativeRootPath), ExternalConfigV1FilePath)
+	namedModules := make(map[string]bufmodule.Module, len(workspaceConfig.Directories))
+	allModules := make([]bufmodule.Module, 0, len(workspaceConfig.Directories))
+	for _, directory := range workspaceConfig.Directories {
 		if err := validateWorkspaceDirectoryNonEmpty(ctx, readBucket, directory, workspaceID); err != nil {
 			return nil, err
 		}
@@ -61,22 +67,41 @@ func newWorkspace(
 			return nil, err
 		}
 		readBucketForDirectory := storage.MapReadBucket(readBucket, storage.MapOnPrefix(directory))
-		moduleConfig, err := configProvider.GetConfig(ctx, readBucketForDirectory)
+		moduleConfig, err := bufconfig.ReadConfig(
+			ctx,
+			configProvider,
+			readBucketForDirectory,
+			bufconfig.ReadConfigWithOverride(configOverride),
+		)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"failed to get module config for directory %q listed in %s: %w",
+				`failed to get module config for directory "%s" listed in %s: %w`,
 				normalpath.Unnormalize(directory),
 				workspaceID,
 				err,
 			)
 		}
-		module, err := bufmodule.NewModuleForBucket(
+		buildOptions, err := BuildOptionsForWorkspaceDirectory(
+			ctx,
+			workspaceConfig,
+			moduleConfig,
+			relativeRootPath,
+			directory,
+			externalDirOrFilePaths,
+			externalDirOrFilePathsAllowNotExist,
+		)
+		if err != nil {
+			return nil, err
+		}
+		module, err := moduleBucketBuilder.BuildForBucket(
 			ctx,
 			readBucketForDirectory,
+			moduleConfig.Build,
+			buildOptions...,
 		)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"failed to initialize module for directory %q listed in %s: %w",
+				`failed to initialize module for directory "%s" listed in %s: %w`,
 				normalpath.Unnormalize(directory),
 				workspaceID,
 				err,
@@ -125,7 +150,7 @@ func validateWorkspaceDirectoryNonEmpty(
 	}
 	if isEmpty {
 		return fmt.Errorf(
-			"module %q listed in %s contains no .proto files",
+			`directory "%s" listed in %s contains no .proto files`,
 			normalpath.Unnormalize(workspaceDirectory),
 			workspaceID,
 		)
@@ -137,9 +162,9 @@ func validateWorkspaceDirectoryNonEmpty(
 // overlap in either direction. The last argument is only used for
 // error reporting.
 //
-//  validateInputOverlap("foo", "bar", "buf.work")     -> OK
-//  validateInputOverlap("foo/bar", "foo", "buf.work") -> NOT OK
-//  validateInputOverlap("foo", "foo/bar", "buf.work") -> NOT OK
+//  validateInputOverlap("foo", "bar", "buf.work.yaml")     -> OK
+//  validateInputOverlap("foo/bar", "foo", "buf.work.yaml") -> NOT OK
+//  validateInputOverlap("foo", "foo/bar", "buf.work.yaml") -> NOT OK
 func validateInputOverlap(
 	workspaceDirectory string,
 	targetSubDirPath string,
@@ -147,21 +172,19 @@ func validateInputOverlap(
 ) error {
 	if normalpath.ContainsPath(workspaceDirectory, targetSubDirPath, normalpath.Relative) {
 		return fmt.Errorf(
-			"failed to build input %q because it is contained by module %q listed in %s; see %s for more details",
+			`failed to build input "%s" because it is contained by directory "%s" listed in %s`,
 			normalpath.Unnormalize(targetSubDirPath),
 			normalpath.Unnormalize(workspaceDirectory),
 			workspaceID,
-			faqPage,
 		)
 	}
 
 	if normalpath.ContainsPath(targetSubDirPath, workspaceDirectory, normalpath.Relative) {
 		return fmt.Errorf(
-			"failed to build input %q because it contains module %q listed in %s; see %s for more details",
+			`failed to build input "%s" because it contains directory "%s" listed in %s`,
 			normalpath.Unnormalize(targetSubDirPath),
 			normalpath.Unnormalize(workspaceDirectory),
 			workspaceID,
-			faqPage,
 		)
 	}
 	return nil

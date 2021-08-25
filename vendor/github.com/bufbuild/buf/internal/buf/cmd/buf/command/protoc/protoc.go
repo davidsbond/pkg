@@ -19,17 +19,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bufbuild/buf/internal/buf/bufanalysis"
 	"github.com/bufbuild/buf/internal/buf/bufcli"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimagebuild"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufimage/bufimageutil"
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule/bufmodulebuild"
 	"github.com/bufbuild/buf/internal/buf/buffetch"
-	"github.com/bufbuild/buf/internal/pkg/app"
-	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
-	"github.com/bufbuild/buf/internal/pkg/app/appflag"
-	"github.com/bufbuild/buf/internal/pkg/storage/storageos"
+	"github.com/bufbuild/buf/private/bufpkg/bufanalysis"
+	"github.com/bufbuild/buf/private/bufpkg/bufimage"
+	"github.com/bufbuild/buf/private/bufpkg/bufimage/bufimagebuild"
+	"github.com/bufbuild/buf/private/bufpkg/bufimage/bufimageutil"
+	"github.com/bufbuild/buf/private/bufpkg/bufmodule/bufmodulebuild"
+	"github.com/bufbuild/buf/private/pkg/app"
+	"github.com/bufbuild/buf/private/pkg/app/appcmd"
+	"github.com/bufbuild/buf/private/pkg/app/appflag"
+	"github.com/bufbuild/buf/private/pkg/storage/storageos"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -39,7 +39,6 @@ import (
 func NewCommand(
 	name string,
 	builder appflag.Builder,
-	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
 ) *appcmd.Command {
 	flagsBuilder := newFlagsBuilder()
 	return &appcmd.Command{
@@ -62,7 +61,7 @@ Additional flags:
 				if err != nil {
 					return err
 				}
-				return run(ctx, container, env, moduleResolverReaderProvider)
+				return run(ctx, container, env)
 			},
 		),
 		BindFlags:     flagsBuilder.Bind,
@@ -75,7 +74,6 @@ func run(
 	ctx context.Context,
 	container appflag.Container,
 	env *env,
-	moduleResolverReaderProvider bufcli.ModuleResolverReaderProvider,
 ) (retErr error) {
 	if env.PrintFreeFieldNumbers && len(env.PluginNameToPluginInfo) > 0 {
 		return fmt.Errorf("cannot call --%s and plugins at the same time", printFreeFieldNumbersFlagName)
@@ -94,16 +92,24 @@ func run(
 		)
 	}
 
+	var buildOption bufmodulebuild.BuildOption
+	if len(env.FilePaths) > 0 {
+		buildOption = bufmodulebuild.WithPaths(env.FilePaths)
+	}
 	storageosProvider := storageos.NewProvider(storageos.ProviderWithSymlinks())
 	module, err := bufmodulebuild.NewModuleIncludeBuilder(container.Logger(), storageosProvider).BuildForIncludes(
 		ctx,
 		env.IncludeDirPaths,
-		bufmodulebuild.WithPaths(env.FilePaths),
+		buildOption,
 	)
 	if err != nil {
 		return err
 	}
-	moduleReader, err := moduleResolverReaderProvider.GetModuleReader(ctx, container)
+	registryProvider, err := bufcli.NewRegistryProvider(ctx, container)
+	if err != nil {
+		return err
+	}
+	moduleReader, err := bufcli.NewModuleReaderAndCreateCacheDirs(container, registryProvider)
 	if err != nil {
 		return err
 	}
@@ -192,7 +198,7 @@ func run(
 		return nil
 	}
 	if env.Output == "" {
-		return bufcli.NewFlagIsRequiredError(outputFlagName)
+		return appcmd.NewInvalidArgumentErrorf("required flag %q not set", outputFlagName)
 	}
 	imageRef, err := buffetch.NewImageRefParser(container.Logger()).GetImageRef(ctx, env.Output)
 	if err != nil {

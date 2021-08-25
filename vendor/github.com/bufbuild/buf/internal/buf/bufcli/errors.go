@@ -19,11 +19,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bufbuild/buf/internal/buf/bufcore/bufmodule"
-	"github.com/bufbuild/buf/internal/pkg/app"
-	"github.com/bufbuild/buf/internal/pkg/app/appcmd"
-	"github.com/bufbuild/buf/internal/pkg/app/appflag"
-	"github.com/bufbuild/buf/internal/pkg/rpc"
+	"github.com/bufbuild/buf/private/bufpkg/bufmodule"
+	"github.com/bufbuild/buf/private/pkg/app"
+	"github.com/bufbuild/buf/private/pkg/app/appflag"
+	"github.com/bufbuild/buf/private/pkg/rpc"
 )
 
 const (
@@ -39,7 +38,7 @@ var (
 	ErrNoModuleName = errors.New(`please specify a module name in your configuration file with the "name" key`)
 
 	// ErrNoConfigFile is used when the user tries to execute a command without a configuration file.
-	ErrNoConfigFile = errors.New(`please define a configuration file in the current directory; you can create one by running "buf beta mod init"`)
+	ErrNoConfigFile = errors.New(`please define a configuration file in the current directory; you can create one by running "buf mod init"`)
 
 	// ErrFileAnnotation is used when we print file annotations and want to return an error.
 	//
@@ -89,10 +88,10 @@ func (e *errInternal) Is(err error) bool {
 }
 
 // NewErrorInterceptor returns a CLI interceptor that wraps Buf CLI errors.
-func NewErrorInterceptor(action string) appflag.Interceptor {
+func NewErrorInterceptor() appflag.Interceptor {
 	return func(next func(context.Context, appflag.Container) error) func(context.Context, appflag.Container) error {
 		return func(ctx context.Context, container appflag.Container) error {
-			return wrapError(action, next(ctx, container))
+			return wrapError(next(ctx, container))
 		}
 	}
 }
@@ -106,11 +105,6 @@ func NewModuleRefError(moduleRef string) error {
 // the given number of attempts.
 func NewTooManyEmptyAnswersError(attempts int) error {
 	return fmt.Errorf("did not receive an answer in %d attempts", attempts)
-}
-
-// NewFlagIsRequiredError informs the user that a given flag is required.
-func NewFlagIsRequiredError(flagName string) error {
-	return appcmd.NewInvalidArgumentErrorf("--%s is required", flagName)
 }
 
 // NewOrganizationNameAlreadyExistsError informs the user that an organization with
@@ -155,22 +149,39 @@ func NewTokenNotFoundError(tokenID string) error {
 	return fmt.Errorf("a token with ID %q does not exist", tokenID)
 }
 
+func NewUnimplementedRemoteError(err error, remote string, moduleIdentity string) error {
+	return fmt.Errorf("%w. Are you sure %q (derived from module name %q) is a Buf Schema Registry?", err, remote, moduleIdentity)
+}
+
+// NewPluginNotFoundError informs the user that a plugin with
+// that owner and name does not exist.
+func NewPluginNotFoundError(owner string, name string) error {
+	return fmt.Errorf("the plugin %s/%s does not exist", owner, name)
+}
+
+// NewTemplateNotFoundError informs the user that a template with
+// that owner and name does not exist.
+func NewTemplateNotFoundError(owner string, name string) error {
+	return fmt.Errorf("the template %s/%s does not exist", owner, name)
+}
+
 // wrapError is used when a CLI command fails, regardless of its error code.
 // Note that this function will wrap the error so that the underlying error
 // can be recovered via 'errors.Is'.
-func wrapError(action string, err error) error {
+func wrapError(err error) error {
 	if err == nil || (err.Error() == "" && !rpc.IsError(err)) {
 		// If the error is nil or empty and not an rpc error, we return it as-is.
 		// This is especially relevant for commands like lint and breaking.
 		return err
 	}
+	rpcCode := rpc.GetErrorCode(err)
 	switch {
-	case rpc.GetErrorCode(err) == rpc.ErrorCodeUnauthenticated, isEmptyUnknownError(err):
-		return fmt.Errorf(`Failed to %q: you are not authenticated. Create a new entry in your netrc, using a Buf API Key as the password. For details, visit https://beta.docs.buf.build/authentication`, action)
-	case rpc.GetErrorCode(err) == rpc.ErrorCodeUnavailable:
-		return fmt.Errorf(`Failed to %q: the server hosted at that remote is unavailable: %w.`, action, err)
+	case rpcCode == rpc.ErrorCodeUnauthenticated, isEmptyUnknownError(err):
+		return errors.New(`Failure: you are not authenticated. Create a new entry in your netrc, using a Buf API Key as the password. For details, visit https://docs.buf.build/bsr/authentication`)
+	case rpcCode == rpc.ErrorCodeUnavailable:
+		return fmt.Errorf(`Failure: the server hosted at that remote is unavailable: %w.`, err)
 	}
-	return fmt.Errorf("Failed to %q: %w.", action, err)
+	return fmt.Errorf("Failure: %w.", err)
 }
 
 // isEmptyUnknownError returns true if the given
