@@ -39,8 +39,6 @@ github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/DataDog/zstd v1.4.1
-github.com/DataDog/zstd
 # github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24
 github.com/Djarvur/go-err113
 # github.com/HdrHistogram/hdrhistogram-go v1.0.0
@@ -262,7 +260,7 @@ github.com/davecgh/go-spew/spew
 github.com/denis-tingajkin/go-header
 # github.com/devigned/tab v0.1.1
 github.com/devigned/tab
-# github.com/dgraph-io/badger/v2 v2.2007.3
+# github.com/dgraph-io/badger/v2 v2.2007.4
 ## explicit
 github.com/dgraph-io/badger/v2
 github.com/dgraph-io/badger/v2/options
@@ -596,7 +594,7 @@ github.com/kisielk/errcheck/errcheck
 # github.com/kisielk/gotool v1.0.0
 github.com/kisielk/gotool
 github.com/kisielk/gotool/internal/load
-# github.com/klauspost/compress v1.12.2
+# github.com/klauspost/compress v1.12.3
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
