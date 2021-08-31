@@ -59,7 +59,8 @@ var defaultLintersSettings = LintersSettings{
 		DefaultSignifiesExhaustive: false,
 	},
 	Gofumpt: GofumptSettings{
-		ExtraRules: false,
+		LangVersion: "",
+		ExtraRules:  false,
 	},
 	ErrorLint: ErrorLintSettings{
 		Errorf:     true,
@@ -160,10 +161,13 @@ type DuplSettings struct {
 }
 
 type ErrcheckSettings struct {
-	CheckTypeAssertions bool   `mapstructure:"check-type-assertions"`
-	CheckAssignToBlank  bool   `mapstructure:"check-blank"`
-	Ignore              string `mapstructure:"ignore"`
-	Exclude             string `mapstructure:"exclude"`
+	CheckTypeAssertions bool     `mapstructure:"check-type-assertions"`
+	CheckAssignToBlank  bool     `mapstructure:"check-blank"`
+	Ignore              string   `mapstructure:"ignore"`
+	ExcludeFunctions    []string `mapstructure:"exclude-functions"`
+
+	// Deprecated: use ExcludeFunctions instead
+	Exclude string `mapstructure:"exclude"`
 }
 
 type ErrorLintSettings struct {
@@ -173,8 +177,9 @@ type ErrorLintSettings struct {
 }
 
 type ExhaustiveSettings struct {
-	CheckGenerated             bool `mapstructure:"check-generated"`
-	DefaultSignifiesExhaustive bool `mapstructure:"default-signifies-exhaustive"`
+	CheckGenerated             bool   `mapstructure:"check-generated"`
+	DefaultSignifiesExhaustive bool   `mapstructure:"default-signifies-exhaustive"`
+	IgnorePattern              string `mapstructure:"ignore-pattern"`
 }
 
 type ExhaustiveStructSettings struct {
@@ -200,6 +205,7 @@ type GocognitSettings struct {
 }
 
 type GoConstSettings struct {
+	IgnoreTests         bool `mapstructure:"ignore-tests"`
 	MatchWithConstants  bool `mapstructure:"match-constant"`
 	MinStringLen        int  `mapstructure:"min-len"`
 	MinOccurrencesCount int  `mapstructure:"min-occurrences"`
@@ -231,7 +237,8 @@ type GoFmtSettings struct {
 }
 
 type GofumptSettings struct {
-	ExtraRules bool `mapstructure:"extra-rules"`
+	LangVersion string `mapstructure:"lang-version"`
+	ExtraRules  bool   `mapstructure:"extra-rules"`
 }
 
 type GoHeaderSettings struct {
@@ -375,10 +382,12 @@ type ReviveSettings struct {
 	IgnoreGeneratedHeader bool `mapstructure:"ignore-generated-header"`
 	Confidence            float64
 	Severity              string
+	EnableAllRules        bool `mapstructure:"enable-all-rules"`
 	Rules                 []struct {
 		Name      string
 		Arguments []interface{}
 		Severity  string
+		Disabled  bool
 	}
 	ErrorCode   int `mapstructure:"error-code"`
 	WarningCode int `mapstructure:"warning-code"`
@@ -394,6 +403,15 @@ type RowsErrCheckSettings struct {
 
 type StaticCheckSettings struct {
 	GoVersion string `mapstructure:"go"`
+
+	Checks                  []string `mapstructure:"checks"`
+	Initialisms             []string `mapstructure:"initialisms"`                // only for stylecheck
+	DotImportWhitelist      []string `mapstructure:"dot-import-whitelist"`       // only for stylecheck
+	HTTPStatusCodeWhitelist []string `mapstructure:"http-status-code-whitelist"` // only for stylecheck
+}
+
+func (s *StaticCheckSettings) HasConfiguration() bool {
+	return len(s.Initialisms) > 0 || len(s.HTTPStatusCodeWhitelist) > 0 || len(s.DotImportWhitelist) > 0 || len(s.Checks) > 0
 }
 
 type StructCheckSettings struct {
@@ -444,7 +462,8 @@ type WhitespaceSettings struct {
 }
 
 type WrapcheckSettings struct {
-	IgnoreSigs []string `mapstructure:"ignoreSigs"`
+	IgnoreSigs         []string `mapstructure:"ignoreSigs"`
+	IgnorePackageGlobs []string `mapstructure:"ignorePackageGlobs"`
 }
 
 type WSLSettings struct {
