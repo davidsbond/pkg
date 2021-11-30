@@ -16,6 +16,11 @@ type Sender struct {
 	nextDeliveryTag uint64
 }
 
+// ID() is the ID of the link used for this Sender.
+func (s *Sender) ID() string {
+	return s.link.key.name
+}
+
 // Send sends a Message.
 //
 // Blocks until the message is sent, ctx completes, or an error occurs.
@@ -26,6 +31,10 @@ type Sender struct {
 // additional messages can be sent while the current goroutine is waiting
 // for the confirmation.
 func (s *Sender) Send(ctx context.Context, msg *Message) error {
+	if err := s.link.Check(); err != nil {
+		return err
+	}
+
 	done, err := s.send(ctx, msg)
 	if err != nil {
 		return err
@@ -38,7 +47,7 @@ func (s *Sender) Send(ctx context.Context, msg *Message) error {
 			return state.Error
 		}
 		return nil
-	case <-s.link.done:
+	case <-s.link.detached:
 		return s.link.err
 	case <-ctx.Done():
 		return errorWrapf(ctx.Err(), "awaiting send")
@@ -107,7 +116,7 @@ func (s *Sender) send(ctx context.Context, msg *Message) (chan deliveryState, er
 
 		select {
 		case s.link.transfers <- fr:
-		case <-s.link.done:
+		case <-s.link.detached:
 			return nil, s.link.err
 		case <-ctx.Done():
 			return nil, errorWrapf(ctx.Err(), "awaiting send")
