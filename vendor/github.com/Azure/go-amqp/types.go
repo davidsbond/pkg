@@ -3509,7 +3509,7 @@ func (a arrayInt64) marshal(wr *buffer) error {
 		typeCode = typeCodeSmalllong
 	)
 	for _, n := range a {
-		if n > math.MaxUint8 {
+		if n > math.MaxInt8 {
 			typeSize = 8
 			typeCode = typeCodeLong
 			break

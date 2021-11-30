@@ -20,9 +20,13 @@ var (
 	// when Session.Close() is called.
 	ErrSessionClosed = errors.New("amqp: session closed")
 
-	// ErrLinkClosed returned by send and receive operations when
+	// ErrLinkClosed is returned by send and receive operations when
 	// Sender.Close() or Receiver.Close() are called.
 	ErrLinkClosed = errors.New("amqp: link closed")
+
+	// ErrLinkDetached is returned by operations when the
+	// link is in a detached state.
+	ErrLinkDetached = errors.New("amqp: link detached")
 )
 
 // Client is an AMQP client connection.
@@ -600,6 +604,17 @@ func LinkSourceTimeout(timeout uint32) LinkOption {
 		}
 		l.source.Timeout = timeout
 
+		return nil
+	}
+}
+
+// LinkDetachOnDispositionError controls whether you detach on disposition
+// errors (subject to some simple logic) or do NOT detach at all on disposition
+// errors.
+// Defaults to true.
+func LinkDetachOnDispositionError(detachOnDispositionError bool) LinkOption {
+	return func(l *link) error {
+		l.detachOnDispositionError = detachOnDispositionError
 		return nil
 	}
 }
