@@ -36,13 +36,13 @@ require (
 	github.com/unrolled/secure v1.0.9
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/automaxprocs v1.4.0
-	gocloud.dev v0.23.0
+	gocloud.dev v0.24.0
 	gocloud.dev/pubsub/kafkapubsub v0.23.0
-	gocloud.dev/pubsub/natspubsub v0.23.0
+	gocloud.dev/pubsub/natspubsub v0.24.0
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.42.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 	mvdan.cc/gofumpt v0.1.1
 )

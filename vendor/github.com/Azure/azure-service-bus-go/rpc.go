@@ -129,6 +129,12 @@ func (r *rpcClient) doRPCWithRetry(ctx context.Context, address string, msg *amq
 		var err error
 		link, err = rpc.NewLink(client, address, opts...)
 		if err == nil {
+			defer func() {
+				if link == nil {
+					return
+				}
+				link.Close(ctx)
+			}()
 			rsp, err = link.RetryableRPC(ctx, times, delay, msg)
 			if err == nil {
 				return rsp, err
@@ -396,6 +402,7 @@ func (r *rpcClient) RenewLocks(ctx context.Context, messages ...*Message) error 
 	ctx, span := startConsumerSpanFromContext(ctx, "sb.RenewLocks")
 	defer span.End()
 
+	var linkName string
 	lockTokens := make([]amqp.UUID, 0, len(messages))
 	for _, m := range messages {
 		if m.LockToken == nil {
@@ -405,6 +412,9 @@ func (r *rpcClient) RenewLocks(ctx context.Context, messages ...*Message) error 
 
 		amqpLockToken := amqp.UUID(*m.LockToken)
 		lockTokens = append(lockTokens, amqpLockToken)
+		if linkName == "" {
+			linkName = m.getLinkName()
+		}
 	}
 
 	if len(lockTokens) < 1 {
@@ -419,6 +429,9 @@ func (r *rpcClient) RenewLocks(ctx context.Context, messages ...*Message) error 
 		Value: map[string]interface{}{
 			lockTokensFieldName: lockTokens,
 		},
+	}
+	if linkName != "" {
+		renewRequestMsg.ApplicationProperties[associatedLinkName] = linkName
 	}
 
 	response, err := r.doRPCWithRetry(ctx, r.ec.ManagementPath(), renewRequestMsg, 3, 1*time.Second)
