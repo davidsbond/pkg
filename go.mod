@@ -13,7 +13,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
-	github.com/golangci/golangci-lint v1.40.1
+	github.com/golangci/golangci-lint v1.43.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
@@ -40,9 +40,9 @@ require (
 	gocloud.dev/pubsub/kafkapubsub v0.23.0
 	gocloud.dev/pubsub/natspubsub v0.23.0
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.42.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 	mvdan.cc/gofumpt v0.1.1
 )
