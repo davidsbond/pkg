@@ -73,7 +73,7 @@ func (r *Receiver) HandleMessage(ctx context.Context, handle func(*Message) erro
 	select {
 	case msg := <-r.link.messages:
 		return callHandler(&msg)
-	case <-r.link.done:
+	case <-r.link.detached:
 		return r.link.err
 	case <-ctx.Done():
 		return ctx.Err()
@@ -118,7 +118,7 @@ func (r *Receiver) Receive(ctx context.Context) (*Message, error) {
 		debug(3, "Receive() blocking %d", msg.deliveryID)
 		msg.receiver = r
 		return &msg, nil
-	case <-r.link.done:
+	case <-r.link.detached:
 		return nil, r.link.err
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -131,6 +131,18 @@ func (r *Receiver) Address() string {
 		return ""
 	}
 	return r.link.source.Address
+}
+
+// LinkSourceFilterValue retrieves the specified link source filter value or nil if it doesn't exist.
+func (r *Receiver) LinkSourceFilterValue(name string) interface{} {
+	if r.link.source == nil {
+		return nil
+	}
+	filter, ok := r.link.source.Filter[symbol(name)]
+	if !ok {
+		return nil
+	}
+	return filter.value
 }
 
 // Close closes the Receiver and AMQP link.
@@ -220,7 +232,7 @@ func (r *Receiver) dispositionBatcher() {
 			batchStarted = false
 			batchTimer.Stop()
 
-		case <-r.link.done:
+		case <-r.link.detached:
 			return
 		}
 	}

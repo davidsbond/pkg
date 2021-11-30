@@ -12,22 +12,35 @@ import (
 //
 // May be used for sending or receiving.
 type link struct {
-	key           linkKey              // Name and direction
-	handle        uint32               // our handle
-	remoteHandle  uint32               // remote's handle
-	dynamicAddr   bool                 // request a dynamic link address from the server
-	rx            chan frameBody       // sessions sends frames for this link on this channel
-	transfers     chan performTransfer // sender uses to send transfer frames
-	closeOnce     sync.Once            // closeOnce protects close from being closed multiple times
-	close         chan struct{}        // close signals the mux to shutdown
-	done          chan struct{}        // done is closed by mux/muxDetach when the link is fully detached
-	detachErrorMu sync.Mutex           // protects detachError
-	detachError   *Error               // error to send to remote on detach, set by closeWithError
-	session       *Session             // parent session
-	receiver      *Receiver            // allows link options to modify Receiver
+	key          linkKey              // Name and direction
+	handle       uint32               // our handle
+	remoteHandle uint32               // remote's handle
+	dynamicAddr  bool                 // request a dynamic link address from the server
+	rx           chan frameBody       // sessions sends frames for this link on this channel
+	transfers    chan performTransfer // sender uses to send transfer frames
+	closeOnce    sync.Once            // closeOnce protects close from being closed multiple times
+
+	// NOTE: `close` and `detached` BOTH need to be checked to determine if the link
+	// is not in a "closed" state
+
+	// close signals the mux to shutdown. This indicates that `Close()` was called on this link.
+	close chan struct{}
+	// detached is closed by mux/muxDetach when the link is fully detached.
+	// This will be initiated if the service sends back an error or requests the link detach.
+	detached chan struct{}
+
+	detachErrorMu sync.Mutex // protects detachError
+	detachError   *Error     // error to send to remote on detach, set by closeWithError
+	session       *Session   // parent session
+	receiver      *Receiver  // allows link options to modify Receiver
 	source        *source
 	target        *target
 	properties    map[symbol]interface{} // additional properties sent upon link attach
+	// Indicates whether we should allow detaches on disposition errors or not.
+	// Some AMQP servers (like Event Hubs) benefit from keeping the link open on disposition errors
+	// (for instance, if you're doing many parallel sends over the same link and you get back a
+	// throttling error, which is not fatal)
+	detachOnDispositionError bool
 
 	// "The delivery-count is initialized by the sender when a link endpoint is created,
 	// and is incremented whenever a message is sent. Only the sender MAY independently
@@ -56,12 +69,13 @@ type link struct {
 
 func newLink(s *Session, r *Receiver, opts []LinkOption) (*link, error) {
 	l := &link{
-		key:           linkKey{randString(40), role(r != nil)},
-		session:       s,
-		receiver:      r,
-		close:         make(chan struct{}),
-		done:          make(chan struct{}),
-		receiverReady: make(chan struct{}, 1),
+		key:                      linkKey{randString(40), role(r != nil)},
+		session:                  s,
+		receiver:                 r,
+		close:                    make(chan struct{}),
+		detached:                 make(chan struct{}),
+		receiverReady:            make(chan struct{}, 1),
+		detachOnDispositionError: true,
 	}
 
 	// configure options
@@ -203,6 +217,8 @@ func attachLink(s *Session, r *Receiver, opts []LinkOption) (*link, error) {
 		// buffer receiver so that link.mux doesn't block
 		l.messages = make(chan Message, l.receiver.maxCredit)
 		l.unsettledMessages = map[string]struct{}{}
+		// copy the received filter values
+		l.source.Filter = resp.Source.Filter
 	} else {
 		// if dynamic address requested, copy assigned name to address
 		if l.dynamicAddr && resp.Target != nil {
@@ -223,9 +239,6 @@ func attachLink(s *Session, r *Receiver, opts []LinkOption) (*link, error) {
 }
 
 func (l *link) addUnsettled(msg *Message) {
-	if len(msg.DeliveryTag) == 0 {
-		return
-	}
 	l.unsettledMessagesLock.Lock()
 	l.unsettledMessages[string(msg.DeliveryTag)] = struct{}{}
 	l.unsettledMessagesLock.Unlock()
@@ -512,7 +525,9 @@ func (l *link) muxReceive(fr performTransfer) error {
 	debug(1, "deliveryID %d before push to receiver - deliveryCount : %d - linkCredit: %d, len(messages): %d, len(inflight): %d", l.msg.deliveryID, l.deliveryCount, l.linkCredit, len(l.messages), len(l.receiver.inFlight.m))
 	// send to receiver, this should never block due to buffering
 	// and flow control.
-	l.addUnsettled(&l.msg)
+	if l.receiverSettleMode.value() == ModeSecond {
+		l.addUnsettled(&l.msg)
+	}
 	l.messages <- l.msg
 
 	debug(1, "deliveryID %d after push to receiver - deliveryCount : %d - linkCredit: %d, len(messages): %d, len(inflight): %d", l.msg.deliveryID, l.deliveryCount, l.linkCredit, len(l.messages), len(l.receiver.inFlight.m))
@@ -532,7 +547,7 @@ func (l *link) muxReceive(fr performTransfer) error {
 func (l *link) muxHandleFrame(fr frameBody) error {
 	var (
 		isSender               = l.receiver == nil
-		errOnRejectDisposition = isSender && (l.receiverSettleMode == nil || *l.receiverSettleMode == ModeFirst)
+		errOnRejectDisposition = l.detachOnDispositionError && (isSender && (l.receiverSettleMode == nil || *l.receiverSettleMode == ModeFirst))
 	)
 
 	switch fr := fr.(type) {
@@ -637,6 +652,19 @@ func (l *link) muxHandleFrame(fr frameBody) error {
 	return nil
 }
 
+// Check checks the link state, returning an error if the link is closed (ErrLinkClosed) or if
+// it is in a detached state (ErrLinkDetached)
+func (l *link) Check() error {
+	select {
+	case <-l.detached:
+		return ErrLinkDetached
+	case <-l.close:
+		return ErrLinkClosed
+	default:
+		return nil
+	}
+}
+
 // close closes and requests deletion of the link.
 //
 // No operations on link are valid after close.
@@ -647,7 +675,7 @@ func (l *link) muxHandleFrame(fr frameBody) error {
 func (l *link) Close(ctx context.Context) error {
 	l.closeOnce.Do(func() { close(l.close) })
 	select {
-	case <-l.done:
+	case <-l.detached:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -679,8 +707,8 @@ func (l *link) muxDetach() {
 			}
 		}
 
-		// signal other goroutines that link is done
-		close(l.done)
+		// signal other goroutines that link is detached
+		close(l.detached)
 
 		// unblock any in flight message dispositions
 		if l.receiver != nil {
