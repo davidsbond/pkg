@@ -59,7 +59,8 @@ var defaultLintersSettings = LintersSettings{
 		DefaultSignifiesExhaustive: false,
 	},
 	Gofumpt: GofumptSettings{
-		ExtraRules: false,
+		LangVersion: "",
+		ExtraRules:  false,
 	},
 	ErrorLint: ErrorLintSettings{
 		Errorf:     true,
@@ -109,6 +110,7 @@ type LintersSettings struct {
 	Gosimple         StaticCheckSettings
 	Govet            GovetSettings
 	Ifshort          IfshortSettings
+	Ireturn          IreturnSettings
 	ImportAs         ImportAsSettings
 	Lll              LllSettings
 	Makezero         MakezeroSettings
@@ -116,6 +118,8 @@ type LintersSettings struct {
 	Misspell         MisspellSettings
 	Nakedret         NakedretSettings
 	Nestif           NestifSettings
+	NilNil           NilNilSettings
+	Nlreturn         NlreturnSettings
 	NoLintLint       NoLintLintSettings
 	Prealloc         PreallocSettings
 	Predeclared      PredeclaredSettings
@@ -128,9 +132,11 @@ type LintersSettings struct {
 	Tagliatelle      TagliatelleSettings
 	Testpackage      TestpackageSettings
 	Thelper          ThelperSettings
+	Tenv             TenvSettings
 	Unparam          UnparamSettings
 	Unused           StaticCheckSettings
 	Varcheck         VarCheckSettings
+	Varnamelen       VarnamelenSettings
 	Whitespace       WhitespaceSettings
 	Wrapcheck        WrapcheckSettings
 	WSL              WSLSettings
@@ -160,10 +166,13 @@ type DuplSettings struct {
 }
 
 type ErrcheckSettings struct {
-	CheckTypeAssertions bool   `mapstructure:"check-type-assertions"`
-	CheckAssignToBlank  bool   `mapstructure:"check-blank"`
-	Ignore              string `mapstructure:"ignore"`
-	Exclude             string `mapstructure:"exclude"`
+	CheckTypeAssertions bool     `mapstructure:"check-type-assertions"`
+	CheckAssignToBlank  bool     `mapstructure:"check-blank"`
+	Ignore              string   `mapstructure:"ignore"`
+	ExcludeFunctions    []string `mapstructure:"exclude-functions"`
+
+	// Deprecated: use ExcludeFunctions instead
+	Exclude string `mapstructure:"exclude"`
 }
 
 type ErrorLintSettings struct {
@@ -173,12 +182,18 @@ type ErrorLintSettings struct {
 }
 
 type ExhaustiveSettings struct {
-	CheckGenerated             bool `mapstructure:"check-generated"`
-	DefaultSignifiesExhaustive bool `mapstructure:"default-signifies-exhaustive"`
+	CheckGenerated             bool   `mapstructure:"check-generated"`
+	DefaultSignifiesExhaustive bool   `mapstructure:"default-signifies-exhaustive"`
+	IgnorePattern              string `mapstructure:"ignore-pattern"`
 }
 
 type ExhaustiveStructSettings struct {
 	StructPatterns []string `mapstructure:"struct-patterns"`
+}
+
+type IreturnSettings struct {
+	Allow  []string `mapstructure:"allow"`
+	Reject []string `mapstructure:"reject"`
 }
 
 type ForbidigoSettings struct {
@@ -200,6 +215,7 @@ type GocognitSettings struct {
 }
 
 type GoConstSettings struct {
+	IgnoreTests         bool `mapstructure:"ignore-tests"`
 	MatchWithConstants  bool `mapstructure:"match-constant"`
 	MinStringLen        int  `mapstructure:"min-len"`
 	MinOccurrencesCount int  `mapstructure:"min-occurrences"`
@@ -231,7 +247,8 @@ type GoFmtSettings struct {
 }
 
 type GofumptSettings struct {
-	ExtraRules bool `mapstructure:"extra-rules"`
+	LangVersion string `mapstructure:"lang-version"`
+	ExtraRules  bool   `mapstructure:"extra-rules"`
 }
 
 type GoHeaderSettings struct {
@@ -278,9 +295,12 @@ type GoModGuardSettings struct {
 }
 
 type GoSecSettings struct {
-	Includes []string
-	Excludes []string
-	Config   map[string]interface{} `mapstructure:"config"`
+	Includes         []string
+	Excludes         []string
+	Severity         string
+	Confidence       string
+	ExcludeGenerated bool                   `mapstructure:"exclude-generated"`
+	Config           map[string]interface{} `mapstructure:"config"`
 }
 
 type GovetSettings struct {
@@ -347,6 +367,14 @@ type NestifSettings struct {
 	MinComplexity int `mapstructure:"min-complexity"`
 }
 
+type NilNilSettings struct {
+	CheckedTypes []string `mapstructure:"checked-types"`
+}
+
+type NlreturnSettings struct {
+	BlockSize int `mapstructure:"block-size"`
+}
+
 type NoLintLintSettings struct {
 	RequireExplanation bool     `mapstructure:"require-explanation"`
 	AllowLeadingSpace  bool     `mapstructure:"allow-leading-space"`
@@ -375,10 +403,12 @@ type ReviveSettings struct {
 	IgnoreGeneratedHeader bool `mapstructure:"ignore-generated-header"`
 	Confidence            float64
 	Severity              string
+	EnableAllRules        bool `mapstructure:"enable-all-rules"`
 	Rules                 []struct {
 		Name      string
 		Arguments []interface{}
 		Severity  string
+		Disabled  bool
 	}
 	ErrorCode   int `mapstructure:"error-code"`
 	WarningCode int `mapstructure:"warning-code"`
@@ -394,6 +424,15 @@ type RowsErrCheckSettings struct {
 
 type StaticCheckSettings struct {
 	GoVersion string `mapstructure:"go"`
+
+	Checks                  []string `mapstructure:"checks"`
+	Initialisms             []string `mapstructure:"initialisms"`                // only for stylecheck
+	DotImportWhitelist      []string `mapstructure:"dot-import-whitelist"`       // only for stylecheck
+	HTTPStatusCodeWhitelist []string `mapstructure:"http-status-code-whitelist"` // only for stylecheck
+}
+
+func (s *StaticCheckSettings) HasConfiguration() bool {
+	return len(s.Initialisms) > 0 || len(s.HTTPStatusCodeWhitelist) > 0 || len(s.DotImportWhitelist) > 0 || len(s.Checks) > 0
 }
 
 type StructCheckSettings struct {
@@ -429,6 +468,10 @@ type ThelperSettings struct {
 	} `mapstructure:"tb"`
 }
 
+type TenvSettings struct {
+	All bool `mapstructure:"all"`
+}
+
 type UnparamSettings struct {
 	CheckExported bool `mapstructure:"check-exported"`
 	Algo          string
@@ -438,13 +481,22 @@ type VarCheckSettings struct {
 	CheckExportedFields bool `mapstructure:"exported-fields"`
 }
 
+type VarnamelenSettings struct {
+	MaxDistance   int      `mapstructure:"max-distance"`
+	MinNameLength int      `mapstructure:"min-name-length"`
+	CheckReceiver bool     `mapstructure:"check-receiver"`
+	CheckReturn   bool     `mapstructure:"check-return"`
+	IgnoreNames   []string `mapstructure:"ignore-names"`
+}
+
 type WhitespaceSettings struct {
 	MultiIf   bool `mapstructure:"multi-if"`
 	MultiFunc bool `mapstructure:"multi-func"`
 }
 
 type WrapcheckSettings struct {
-	IgnoreSigs []string `mapstructure:"ignoreSigs"`
+	IgnoreSigs         []string `mapstructure:"ignoreSigs"`
+	IgnorePackageGlobs []string `mapstructure:"ignorePackageGlobs"`
 }
 
 type WSLSettings struct {
@@ -460,8 +512,20 @@ type WSLSettings struct {
 	ForceCaseTrailingWhitespaceLimit int  `mapstructure:"force-case-trailing-whitespace"`
 }
 
+// CustomLinterSettings encapsulates the meta-data of a private linter.
+// For example, a private linter may be added to the golangci config file as shown below.
+//
+// linters-settings:
+//  custom:
+//    example:
+//      path: /example.so
+//      description: The description of the linter
+//      original-url: github.com/golangci/example-linter
 type CustomLinterSettings struct {
-	Path        string
+	// Path to a plugin *.so file that implements the private linter.
+	Path string
+	// Description describes the purpose of the private linter.
 	Description string
+	// The URL containing the source code for the private linter.
 	OriginalURL string `mapstructure:"original-url"`
 }

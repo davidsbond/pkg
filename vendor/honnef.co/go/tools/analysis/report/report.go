@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
-	"go/printer"
+	"go/format"
 	"go/token"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"honnef.co/go/tools/analysis/facts"
+	"honnef.co/go/tools/go/ast/astutil"
 
 	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/go/ast/astutil"
 )
 
 type Options struct {
@@ -194,7 +194,7 @@ func Report(pass *analysis.Pass, node Positioner, message string, opts ...Option
 
 func Render(pass *analysis.Pass, x interface{}) string {
 	var buf bytes.Buffer
-	if err := printer.Fprint(&buf, pass.Fset, x); err != nil {
+	if err := format.Node(&buf, pass.Fset, x); err != nil {
 		panic(err)
 	}
 	return buf.String()
