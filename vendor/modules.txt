@@ -1,6 +1,6 @@
 # 4d63.com/gochecknoglobals v0.0.0-20201008074935-acfc0b28355a
 4d63.com/gochecknoglobals/checknoglobals
-# cloud.google.com/go v0.81.0
+# cloud.google.com/go v0.88.0
 cloud.google.com/go/compute/metadata
 cloud.google.com/go/iam
 # cloud.google.com/go/pubsub v1.10.3
@@ -27,7 +27,7 @@ github.com/Azure/go-autorest
 # github.com/Azure/go-autorest/autorest v0.11.18
 github.com/Azure/go-autorest/autorest
 github.com/Azure/go-autorest/autorest/azure
-# github.com/Azure/go-autorest/autorest/adal v0.9.13
+# github.com/Azure/go-autorest/autorest/adal v0.9.14
 github.com/Azure/go-autorest/autorest/adal
 # github.com/Azure/go-autorest/autorest/date v0.3.0
 github.com/Azure/go-autorest/autorest/date
@@ -292,7 +292,7 @@ github.com/fatih/color
 github.com/fatih/structtag
 # github.com/felixge/httpsnoop v1.0.1
 github.com/felixge/httpsnoop
-# github.com/form3tech-oss/jwt-go v3.2.2+incompatible
+# github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 github.com/form3tech-oss/jwt-go
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
@@ -348,17 +348,18 @@ github.com/gofrs/flock
 # github.com/gofrs/uuid v4.2.0+incompatible
 ## explicit
 github.com/gofrs/uuid
-# github.com/golang-migrate/migrate/v4 v4.14.1
+# github.com/golang-migrate/migrate/v4 v4.15.1
 ## explicit
 github.com/golang-migrate/migrate/v4
 github.com/golang-migrate/migrate/v4/database
+github.com/golang-migrate/migrate/v4/database/multistmt
 github.com/golang-migrate/migrate/v4/database/postgres
 github.com/golang-migrate/migrate/v4/database/sqlite3
 github.com/golang-migrate/migrate/v4/internal/url
 github.com/golang-migrate/migrate/v4/source
 github.com/golang-migrate/migrate/v4/source/file
 github.com/golang-migrate/migrate/v4/source/go_bindata
-github.com/golang-migrate/migrate/v4/source/httpfs
+github.com/golang-migrate/migrate/v4/source/iofs
 # github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 github.com/golang/groupcache/lru
 # github.com/golang/mock v1.6.0
@@ -379,7 +380,7 @@ github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/struct
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
-# github.com/golang/snappy v0.0.3
+# github.com/golang/snappy v0.0.4
 github.com/golang/snappy
 # github.com/golangci/check v0.0.0-20180506172741-cfe4005ccda2
 github.com/golangci/check/cmd/structcheck
@@ -436,7 +437,7 @@ github.com/golangci/revgrep
 github.com/golangci/unconvert
 # github.com/google/btree v1.0.0
 github.com/google/btree
-# github.com/google/go-cmp v0.5.5
+# github.com/google/go-cmp v0.5.6
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -594,10 +595,12 @@ github.com/kisielk/errcheck/errcheck
 # github.com/kisielk/gotool v1.0.0
 github.com/kisielk/gotool
 github.com/kisielk/gotool/internal/load
-# github.com/klauspost/compress v1.12.3
+# github.com/klauspost/compress v1.13.6
+github.com/klauspost/compress
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
+github.com/klauspost/compress/internal/snapref
 github.com/klauspost/compress/zip
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
@@ -640,7 +643,7 @@ github.com/mattn/go-runewidth
 # github.com/mattn/go-sqlite3 v1.14.8
 ## explicit
 github.com/mattn/go-sqlite3
-# github.com/matttproud/golang_protobuf_extensions v1.0.1
+# github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mbilski/exhaustivestruct v1.2.0
 github.com/mbilski/exhaustivestruct/pkg/analyzer
@@ -695,7 +698,7 @@ github.com/opentracing-contrib/go-stdlib/nethttp
 github.com/opentracing/opentracing-go
 github.com/opentracing/opentracing-go/ext
 github.com/opentracing/opentracing-go/log
-# github.com/pelletier/go-toml v1.2.0
+# github.com/pelletier/go-toml v1.8.1
 github.com/pelletier/go-toml
 # github.com/phayes/checkstyle v0.0.0-20170904204023-bfd46e6a821d
 github.com/phayes/checkstyle
@@ -771,7 +774,7 @@ github.com/sonatard/noctx/ngfunc
 github.com/sonatard/noctx/reqwithoutctx
 # github.com/sourcegraph/go-diff v0.6.1
 github.com/sourcegraph/go-diff/diff
-# github.com/spf13/afero v1.1.2
+# github.com/spf13/afero v1.2.2
 github.com/spf13/afero
 github.com/spf13/afero/mem
 # github.com/spf13/cast v1.3.0
@@ -909,7 +912,7 @@ gocloud.dev/pubsub/natspubsub
 # gocloud.dev/pubsub/rabbitpubsub v0.23.0
 ## explicit
 gocloud.dev/pubsub/rabbitpubsub
-# golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+# golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 ## explicit
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
@@ -925,7 +928,7 @@ golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
+# golang.org/x/net v0.0.0-20211013171255-e13a2654a71e
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -941,7 +944,7 @@ golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/proxy
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20210427180440-81ed05c6b58c
+# golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
 golang.org/x/oauth2/google
@@ -952,13 +955,13 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210806184541-e5e7981a1069
+# golang.org/x/sys v0.0.0-20211013075003-97ac67df715c
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.6
+# golang.org/x/text v0.3.7
 golang.org/x/text/cases
 golang.org/x/text/internal
 golang.org/x/text/internal/language
@@ -972,7 +975,7 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/tools v0.1.2-0.20210512205948-8287d5da45e4
+# golang.org/x/tools v0.1.5
 golang.org/x/tools/go/analysis
 golang.org/x/tools/go/analysis/passes/asmdecl
 golang.org/x/tools/go/analysis/passes/assign
@@ -1041,11 +1044,12 @@ golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/lsp/fuzzy
 golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/api v0.46.0
+# google.golang.org/api v0.51.0
 google.golang.org/api/internal
 google.golang.org/api/internal/impersonate
 google.golang.org/api/iterator
@@ -1067,7 +1071,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210506142907-4a47615972c2
+# google.golang.org/genproto v0.0.0-20211013025323-ce878158c4d4
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/pubsub/v1
@@ -1138,7 +1142,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.26.0
+# google.golang.org/protobuf v1.27.1
 ## explicit
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
 google.golang.org/protobuf/compiler/protogen
