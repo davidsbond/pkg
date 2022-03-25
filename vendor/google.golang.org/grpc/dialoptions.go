@@ -26,10 +26,11 @@ import (
 
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/balancer"
+	"google.golang.org/grpc/channelz"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/internal"
 	internalbackoff "google.golang.org/grpc/internal/backoff"
-	"google.golang.org/grpc/internal/envconfig"
 	"google.golang.org/grpc/internal/transport"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/resolver"
@@ -50,7 +51,6 @@ type dialOptions struct {
 	bs              internalbackoff.Strategy
 	block           bool
 	returnLastError bool
-	insecure        bool
 	timeout         time.Duration
 	scChan          <-chan ServiceConfig
 	authority       string
@@ -58,7 +58,7 @@ type dialOptions struct {
 	callOptions     []CallOption
 	// This is used by WithBalancerName dial option.
 	balancerBuilder             balancer.Builder
-	channelzParentID            int64
+	channelzParentID            *channelz.Identifier
 	disableServiceConfig        bool
 	disableRetry                bool
 	disableHealthCheck          bool
@@ -228,18 +228,14 @@ func WithServiceConfig(c <-chan ServiceConfig) DialOption {
 	})
 }
 
-// WithConnectParams configures the dialer to use the provided ConnectParams.
+// WithConnectParams configures the ClientConn to use the provided ConnectParams
+// for creating and maintaining connections to servers.
 //
 // The backoff configuration specified as part of the ConnectParams overrides
 // all defaults specified in
 // https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md. Consider
 // using the backoff.DefaultConfig as a base, in cases where you want to
 // override only a subset of the backoff configuration.
-//
-// Experimental
-//
-// Notice: This API is EXPERIMENTAL and may be changed or removed in a
-// later release.
 func WithConnectParams(p ConnectParams) DialOption {
 	return newFuncDialOption(func(o *dialOptions) {
 		o.bs = internalbackoff.Exponential{Config: p.Backoff}
@@ -277,7 +273,7 @@ func withBackoff(bs internalbackoff.Strategy) DialOption {
 	})
 }
 
-// WithBlock returns a DialOption which makes caller of Dial blocks until the
+// WithBlock returns a DialOption which makes callers of Dial block until the
 // underlying connection is up. Without this, Dial returns immediately and
 // connecting the server happens in background.
 func WithBlock() DialOption {
@@ -303,11 +299,17 @@ func WithReturnConnectionError() DialOption {
 }
 
 // WithInsecure returns a DialOption which disables transport security for this
-// ClientConn. Note that transport security is required unless WithInsecure is
-// set.
+// ClientConn. Under the hood, it uses insecure.NewCredentials().
+//
+// Note that using this DialOption with per-RPC credentials (through
+// WithCredentialsBundle or WithPerRPCCredentials) which require transport
+// security is incompatible and will cause grpc.Dial() to fail.
+//
+// Deprecated: use WithTransportCredentials and insecure.NewCredentials() instead.
+// Will be supported throughout 1.x.
 func WithInsecure() DialOption {
 	return newFuncDialOption(func(o *dialOptions) {
-		o.insecure = true
+		o.copts.TransportCredentials = insecure.NewCredentials()
 	})
 }
 
@@ -497,7 +499,7 @@ func WithAuthority(a string) DialOption {
 //
 // Notice: This API is EXPERIMENTAL and may be changed or removed in a
 // later release.
-func WithChannelzParentID(id int64) DialOption {
+func WithChannelzParentID(id *channelz.Identifier) DialOption {
 	return newFuncDialOption(func(o *dialOptions) {
 		o.channelzParentID = id
 	})
@@ -580,7 +582,6 @@ func withHealthCheckFunc(f internal.HealthChecker) DialOption {
 
 func defaultDialOptions() dialOptions {
 	return dialOptions{
-		disableRetry:    !envconfig.Retry,
 		healthCheckFunc: internal.HealthCheckFunc,
 		copts: transport.ConnectOptions{
 			WriteBufferSize: defaultWriteBufSize,
