@@ -22,7 +22,6 @@ type (
 	}
 
 	receivingEntity struct {
-		renewMessageLockMutex sync.Mutex
 		*entity
 	}
 
@@ -93,7 +92,7 @@ func (e *entity) getEntity() *entity {
 // unable to complete the operation, or an empty slice of messages and an instance of "ErrNoMessages" signifying that
 // there are currently no messages in the queue with a sequence ID larger than previously viewed ones.
 func (re *receivingEntity) Peek(ctx context.Context, options ...PeekOption) (MessageIterator, error) {
-	ctx, span := re.entity.startSpanFromContext(ctx, "sb.entity.Peek")
+	_, span := re.entity.startSpanFromContext(ctx, "sb.entity.Peek")
 	defer span.End()
 
 	return newPeekIterator(re.entity, options...)
@@ -191,9 +190,6 @@ func (re *receivingEntity) ReceiveDeferredWithMode(ctx context.Context, handler 
 func (re *receivingEntity) RenewLocks(ctx context.Context, messages ...*Message) error {
 	ctx, span := re.startSpanFromContext(ctx, "sb.receivingEntity.RenewLocks")
 	defer span.End()
-
-	re.renewMessageLockMutex.Lock()
-	defer re.renewMessageLockMutex.Unlock()
 
 	client, err := re.entity.GetRPCClient(ctx)
 	if err != nil {

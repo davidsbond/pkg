@@ -24,6 +24,8 @@ package servicebus
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -32,6 +34,8 @@ import (
 	"github.com/Azure/go-amqp"
 	"github.com/devigned/tab"
 )
+
+const sessionFilterName = "com.microsoft:session-filter"
 
 type (
 	// Receiver provides connection, session and link handling for a receiving to an entity path
@@ -222,62 +226,6 @@ func (r *Receiver) Listen(ctx context.Context, handler Handler) *ListenerHandle 
 	}
 }
 
-func (r *Receiver) handleMessage(ctx context.Context, msg *amqp.Message, handler Handler) {
-	const optName = "sb.Receiver.handleMessage"
-
-	event, err := messageFromAMQPMessage(msg)
-	if err != nil {
-		_, span := r.startConsumerSpanFromContext(ctx, optName)
-		span.Logger().Error(err)
-		r.setLastError(err)
-		if r.doneListening != nil {
-			r.doneListening()
-		}
-		return
-	}
-
-	ctx, span := tab.StartSpanWithRemoteParent(ctx, optName, event)
-	defer span.End()
-
-	id := messageID(msg)
-	if idStr, ok := id.(string); ok {
-		span.AddAttributes(tab.StringAttribute("amqp.message.id", idStr))
-	}
-
-	if err := handler.Handle(ctx, event); err != nil {
-		// stop handling messages since the message consumer ran into an unexpected error
-		r.setLastError(err)
-		if r.doneListening != nil {
-			r.doneListening()
-		}
-		return
-	}
-
-	// nothing more to be done. The message was settled when it was accepted by the Receiver
-	if r.mode == ReceiveAndDeleteMode {
-		return
-	}
-
-	// nothing more to be done. The Receiver has no default disposition, so the handler is solely responsible for
-	// disposition
-	if r.DefaultDisposition == nil {
-		return
-	}
-
-	// default disposition is set, so try to send the disposition. If the message disposition has already been set, the
-	// underlying AMQP library will ignore the second disposition respecting the disposition of the handler func.
-	if err := r.DefaultDisposition(ctx); err != nil {
-		// if an error is returned by the default disposition, then we must alert the message consumer as we can't
-		// be sure the final message disposition.
-		tab.For(ctx).Error(err)
-		r.setLastError(err)
-		if r.doneListening != nil {
-			r.doneListening()
-		}
-		return
-	}
-}
-
 func (r *Receiver) listenForMessages(ctx context.Context, handler amqpHandler) {
 	ctx, span := r.startConsumerSpanFromContext(ctx, "sb.Receiver.listenForMessages")
 	defer span.End()
@@ -342,13 +290,12 @@ func (r *Receiver) listenForMessage(ctx context.Context, handler amqpHandler) er
 	}
 	receiver = r.receiver
 	r.clientMu.RUnlock()
-	err := receiver.HandleMessage(ctx, func(message *amqp.Message) error {
-		return handler.Handle(ctx, message)
-	})
+	msg, err := receiver.Receive(ctx)
 	if err != nil {
 		tab.For(ctx).Debug(err.Error())
 		return err
 	}
+	handler.Handle(ctx, msg, r.receiver)
 	return nil
 }
 
@@ -408,8 +355,9 @@ func (r *Receiver) newSessionAndLink(ctx context.Context) error {
 		opts = append(opts, amqp.LinkSenderSettle(amqp.ModeSettled))
 	}
 
-	if opt, ok := r.getSessionFilterLinkOption(); ok {
-		opts = append(opts, opt)
+	sessionOpt, useSessionOpt := r.getSessionFilterLinkOption()
+	if useSessionOpt {
+		opts = append(opts, sessionOpt)
 	}
 
 	amqpReceiver, err := amqpSession.NewReceiver(opts...)
@@ -417,13 +365,22 @@ func (r *Receiver) newSessionAndLink(ctx context.Context) error {
 		tab.For(ctx).Error(err)
 		return err
 	}
-
 	r.receiver = amqpReceiver
+	if useSessionOpt {
+		rawsid := r.receiver.LinkSourceFilterValue(sessionFilterName)
+		if rawsid == nil && r.sessionID == nil {
+			return errors.New("failed to create a receiver.  no unlocked sessions available")
+		} else if rawsid != nil && r.sessionID != nil && rawsid != *r.sessionID {
+			return fmt.Errorf("failed to create a receiver for session %s, it may be locked by another receiver", rawsid)
+		} else if r.sessionID == nil {
+			sid := rawsid.(string)
+			r.sessionID = &sid
+		}
+	}
 	return nil
 }
 
 func (r *Receiver) getSessionFilterLinkOption() (amqp.LinkOption, bool) {
-	const name = "com.microsoft:session-filter"
 	const code = uint64(0x00000137000000C)
 
 	if !r.useSessions {
@@ -431,10 +388,10 @@ func (r *Receiver) getSessionFilterLinkOption() (amqp.LinkOption, bool) {
 	}
 
 	if r.sessionID == nil {
-		return amqp.LinkSourceFilter(name, code, nil), true
+		return amqp.LinkSourceFilter(sessionFilterName, code, nil), true
 	}
 
-	return amqp.LinkSourceFilter(name, code, r.sessionID), true
+	return amqp.LinkSourceFilter(sessionFilterName, code, r.sessionID), true
 }
 
 func messageID(msg *amqp.Message) interface{} {
