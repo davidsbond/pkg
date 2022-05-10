@@ -279,7 +279,7 @@ func (r *parseResult) asExtensionRanges(node *ast.ExtensionRangeNode, maxTag int
 	opts := r.asUninterpretedOptions(node.Options.GetElements())
 	ers := make([]*dpb.DescriptorProto_ExtensionRange, len(node.Ranges))
 	for i, rng := range node.Ranges {
-		start, end := getRangeBounds(r, rng, 0, maxTag)
+		start, end := getRangeBounds(r, rng, 1, maxTag)
 		er := &dpb.DescriptorProto_ExtensionRange{
 			Start: proto.Int32(start),
 			End:   proto.Int32(end + 1),
@@ -477,7 +477,14 @@ func (r *parseResult) addMessageBody(msgd *dpb.DescriptorProto, body *ast.Messag
 
 	// process any proto3_optional fields
 	if isProto3 {
-		internal.ProcessProto3OptionalFields(msgd)
+		callback := func(fd *dpb.FieldDescriptorProto, ood *dpb.OneofDescriptorProto) {
+			node, ok := r.getFieldNode(fd).(*ast.FieldNode)
+			if ok {
+				r.putOneOfNode(ood, ast.NewSyntheticOneOf(node))
+			}
+			// TODO: the !ok case should really never happen... log an error?
+		}
+		internal.ProcessProto3OptionalFields(msgd, callback)
 	}
 }
 
@@ -506,7 +513,7 @@ func isMessageSetWireFormat(res *parseResult, scope string, md *dpb.DescriptorPr
 }
 
 func (r *parseResult) asMessageReservedRange(rng *ast.RangeNode, maxTag int32) *dpb.DescriptorProto_ReservedRange {
-	start, end := getRangeBounds(r, rng, 0, maxTag)
+	start, end := getRangeBounds(r, rng, 1, maxTag)
 	rr := &dpb.DescriptorProto_ReservedRange{
 		Start: proto.Int32(start),
 		End:   proto.Int32(end + 1),
