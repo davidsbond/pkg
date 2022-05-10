@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/devigned/tab"
 
 	"github.com/Azure/azure-service-bus-go/atom"
+	"github.com/Azure/azure-service-bus-go/internal"
 )
 
 type (
@@ -49,6 +51,34 @@ type (
 	TopicManagementOption func(*TopicDescription) error
 )
 
+type (
+	// ListTopicsOptions provides options for List() to control things like page size.
+	// NOTE: Use the ListTopicsWith* methods to specify this.
+	ListTopicsOptions struct {
+		top  int
+		skip int
+	}
+
+	// ListTopicsOption represents named options for listing topics
+	ListTopicsOption func(*ListTopicsOptions) error
+)
+
+// ListTopicsWithSkip will skip the specified number of entities
+func ListTopicsWithSkip(skip int) ListTopicsOption {
+	return func(options *ListTopicsOptions) error {
+		options.skip = skip
+		return nil
+	}
+}
+
+// ListTopicsWithTop will return at most `top` results
+func ListTopicsWithTop(top int) ListTopicsOption {
+	return func(options *ListTopicsOptions) error {
+		options.top = top
+		return nil
+	}
+}
+
 // NewTopicManager creates a new TopicManager for a Service Bus Namespace
 func (ns *Namespace) NewTopicManager() *TopicManager {
 	return &TopicManager{
@@ -64,7 +94,7 @@ func (tm *TopicManager) Delete(ctx context.Context, name string) error {
 	res, err := tm.entityManager.Delete(ctx, "/"+name)
 	defer closeRes(ctx, res)
 
-	return err
+	return checkForError(ctx, err, res)
 }
 
 // Put creates or updates a Service Bus Topic
@@ -122,11 +152,21 @@ func (tm *TopicManager) Put(ctx context.Context, name string, opts ...TopicManag
 }
 
 // List fetches all of the Topics for a Service Bus Namespace
-func (tm *TopicManager) List(ctx context.Context) ([]*TopicEntity, error) {
+func (tm *TopicManager) List(ctx context.Context, options ...ListTopicsOption) ([]*TopicEntity, error) {
 	ctx, span := tm.startSpanFromContext(ctx, "sb.TopicManager.List")
 	defer span.End()
 
-	res, err := tm.entityManager.Get(ctx, `/$Resources/Topics`)
+	listTopicsOptions := ListTopicsOptions{}
+
+	for _, option := range options {
+		if err := option(&listTopicsOptions); err != nil {
+			return nil, err
+		}
+	}
+
+	basePath := internal.ConstructAtomPath("/$Resources/Topics", listTopicsOptions.skip, listTopicsOptions.top)
+
+	res, err := tm.entityManager.Get(ctx, basePath)
 	defer closeRes(ctx, res)
 
 	if err != nil {
@@ -161,13 +201,8 @@ func (tm *TopicManager) Get(ctx context.Context, name string) (*TopicEntity, err
 	res, err := tm.entityManager.Get(ctx, name)
 	defer closeRes(ctx, res)
 
-	if err != nil {
-		tab.For(ctx).Error(err)
+	if err := checkForError(ctx, err, res); err != nil {
 		return nil, err
-	}
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, ErrNotFound{EntityPath: res.Request.URL.Path}
 	}
 
 	b, err := ioutil.ReadAll(res.Body)
@@ -282,4 +317,26 @@ func TopicWithMessageTimeToLive(window *time.Duration) TopicManagementOption {
 		t.DefaultMessageTimeToLive = ptrString(durationTo8601Seconds(*window))
 		return nil
 	}
+}
+
+func checkForError(ctxForLogging context.Context, err error, res *http.Response) error {
+	if err != nil {
+		tab.For(ctxForLogging).Error(err)
+		return err
+	}
+
+	// check the response as well
+	if res.StatusCode == http.StatusNotFound {
+		err := ErrNotFound{EntityPath: res.Request.URL.Path}
+		tab.For(ctxForLogging).Error(err)
+		return err
+	}
+
+	if res.StatusCode >= 400 {
+		err := fmt.Errorf("request failed: %s", res.Status)
+		tab.For(ctxForLogging).Error(err)
+		return err
+	}
+
+	return nil
 }
