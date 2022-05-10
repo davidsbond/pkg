@@ -15,6 +15,7 @@ import (
 	"github.com/devigned/tab"
 
 	"github.com/Azure/azure-service-bus-go/atom"
+	"github.com/Azure/azure-service-bus-go/internal"
 )
 
 type (
@@ -156,6 +157,34 @@ type (
 	SubscriptionManagementOption func(*SubscriptionDescription) error
 )
 
+type (
+	// ListSubscriptionsOptions provides options for List() to control things like page size.
+	// NOTE: Use the ListSubscriptionsWith* methods to specify this.
+	ListSubscriptionsOptions struct {
+		top  int
+		skip int
+	}
+
+	//ListSubscriptionsOption represents named options for listing topics
+	ListSubscriptionsOption func(*ListSubscriptionsOptions) error
+)
+
+// ListSubscriptionsWithSkip will skip the specified number of entities
+func ListSubscriptionsWithSkip(skip int) ListSubscriptionsOption {
+	return func(options *ListSubscriptionsOptions) error {
+		options.skip = skip
+		return nil
+	}
+}
+
+// ListSubscriptionsWithTop will return at most `top` results
+func ListSubscriptionsWithTop(top int) ListSubscriptionsOption {
+	return func(options *ListSubscriptionsOptions) error {
+		options.top = top
+		return nil
+	}
+}
+
 // NewSubscriptionManager creates a new SubscriptionManager for a Service Bus Topic
 func (t *Topic) NewSubscriptionManager() *SubscriptionManager {
 	return &SubscriptionManager{
@@ -184,7 +213,7 @@ func (sm *SubscriptionManager) Delete(ctx context.Context, name string) error {
 	res, err := sm.entityManager.Delete(ctx, sm.getResourceURI(name))
 	defer closeRes(ctx, res)
 
-	return err
+	return checkForError(ctx, err, res)
 }
 
 // Put creates or updates a Service Bus Topic
@@ -231,7 +260,7 @@ func (sm *SubscriptionManager) Put(ctx context.Context, name string, opts ...Sub
 	res, err := sm.entityManager.Put(ctx, sm.getResourceURI(name), reqBytes, mw...)
 	defer closeRes(ctx, res)
 
-	if err != nil {
+	if err := checkForError(ctx, err, res); err != nil {
 		return nil, err
 	}
 
@@ -249,14 +278,24 @@ func (sm *SubscriptionManager) Put(ctx context.Context, name string, opts ...Sub
 }
 
 // List fetches all of the Topics for a Service Bus Namespace
-func (sm *SubscriptionManager) List(ctx context.Context) ([]*SubscriptionEntity, error) {
+func (sm *SubscriptionManager) List(ctx context.Context, options ...ListSubscriptionsOption) ([]*SubscriptionEntity, error) {
 	ctx, span := sm.startSpanFromContext(ctx, "sb.SubscriptionManager.List")
 	defer span.End()
 
-	res, err := sm.entityManager.Get(ctx, "/"+sm.Topic.Name+"/subscriptions")
+	listSubscriptionsOptions := ListSubscriptionsOptions{}
+
+	for _, option := range options {
+		if err := option(&listSubscriptionsOptions); err != nil {
+			return nil, err
+		}
+	}
+
+	basePath := internal.ConstructAtomPath("/"+sm.Topic.Name+"/subscriptions", listSubscriptionsOptions.skip, listSubscriptionsOptions.top)
+
+	res, err := sm.entityManager.Get(ctx, basePath)
 	defer closeRes(ctx, res)
 
-	if err != nil {
+	if err := checkForError(ctx, err, res); err != nil {
 		return nil, err
 	}
 
@@ -286,12 +325,8 @@ func (sm *SubscriptionManager) Get(ctx context.Context, name string) (*Subscript
 	res, err := sm.entityManager.Get(ctx, sm.getResourceURI(name))
 	defer closeRes(ctx, res)
 
-	if err != nil {
+	if err := checkForError(ctx, err, res); err != nil {
 		return nil, err
-	}
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, ErrNotFound{EntityPath: res.Request.URL.Path}
 	}
 
 	b, err := ioutil.ReadAll(res.Body)
@@ -322,12 +357,8 @@ func (sm *SubscriptionManager) ListRules(ctx context.Context, subscriptionName s
 	res, err := sm.entityManager.Get(ctx, sm.getRulesResourceURI(subscriptionName))
 	defer closeRes(ctx, res)
 
-	if err != nil {
+	if err := checkForError(ctx, err, res); err != nil {
 		return nil, err
-	}
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, ErrNotFound{EntityPath: res.Request.URL.Path}
 	}
 
 	b, err := ioutil.ReadAll(res.Body)
@@ -434,7 +465,7 @@ func (sm *SubscriptionManager) DeleteRule(ctx context.Context, subscriptionName,
 	res, err := sm.entityManager.Delete(ctx, sm.getRuleResourceURI(subscriptionName, ruleName))
 	defer closeRes(ctx, res)
 
-	return err
+	return checkForError(ctx, err, res)
 }
 
 func ruleEntryToEntity(entry *ruleEntry) *RuleEntity {
@@ -514,7 +545,7 @@ func SubscriptionWithLockDuration(window *time.Duration) SubscriptionManagementO
 			window = &duration
 		}
 		if *window > time.Duration(5*time.Minute) {
-			return fmt.Errorf("Lock duration must be shorter than 5 minutes got: %v", *window)
+			return fmt.Errorf("lock duration must be shorter than 5 minutes got: %v", *window)
 		}
 
 		s.LockDuration = ptrString(durationTo8601Seconds(*window))
