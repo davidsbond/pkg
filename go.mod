@@ -10,7 +10,7 @@ require (
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/gofrs/uuid v4.2.0+incompatible
-	github.com/golang-migrate/migrate/v4 v4.14.1
+	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/golangci/golangci-lint v1.40.1
@@ -24,7 +24,7 @@ require (
 	github.com/jlaffaye/ftp v0.0.0-20201112195030-9aae4d151126
 	github.com/luna-duclos/instrumentedsql v1.1.3
 	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201015064105-f9d01e123f16
-	github.com/mattn/go-sqlite3 v1.14.8
+	github.com/mattn/go-sqlite3 v1.14.10
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/client_golang v1.11.0
@@ -42,7 +42,7 @@ require (
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.42.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/grpc v1.45.0
+	google.golang.org/protobuf v1.27.1
 	mvdan.cc/gofumpt v0.1.1
 )
