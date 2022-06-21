@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.0.0 // indirect
-	github.com/bufbuild/buf v0.42.1
+	github.com/bufbuild/buf v1.6.0
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/getsentry/sentry-go v0.13.0
@@ -30,7 +30,7 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sebdah/markdown-toc v0.0.0-20171116085747-3bb461875c34
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.4
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
 	github.com/uber/jaeger-lib v2.4.0+incompatible // indirect
 	github.com/unrolled/secure v1.0.9
@@ -41,8 +41,8 @@ require (
 	gocloud.dev/pubsub/natspubsub v0.23.0
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.42.0
-	google.golang.org/protobuf v1.26.0
+	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
+	google.golang.org/grpc v1.47.0
+	google.golang.org/protobuf v1.28.0
 	mvdan.cc/gofumpt v0.1.1
 )
