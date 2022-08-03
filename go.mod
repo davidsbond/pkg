@@ -25,6 +25,7 @@ require (
 	github.com/luna-duclos/instrumentedsql v1.1.3
 	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201015064105-f9d01e123f16
 	github.com/mattn/go-sqlite3 v1.14.8
+	github.com/nats-io/jwt v1.2.2 // indirect
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/prometheus/client_golang v1.11.0
@@ -36,13 +37,13 @@ require (
 	github.com/unrolled/secure v1.0.9
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/automaxprocs v1.4.0
-	gocloud.dev v0.23.0
+	gocloud.dev v0.26.0
 	gocloud.dev/pubsub/kafkapubsub v0.23.0
-	gocloud.dev/pubsub/natspubsub v0.23.0
+	gocloud.dev/pubsub/natspubsub v0.26.0
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.42.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/grpc v1.45.0
+	google.golang.org/protobuf v1.28.0
 	mvdan.cc/gofumpt v0.1.1
 )
