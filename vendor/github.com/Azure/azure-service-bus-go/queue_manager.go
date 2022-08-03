@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"io/ioutil"
-	"net/http"
 	"strings"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/devigned/tab"
 
 	"github.com/Azure/azure-service-bus-go/atom"
+	"github.com/Azure/azure-service-bus-go/internal"
 )
 
 type (
@@ -53,6 +53,34 @@ type (
 		TargetURI() string
 	}
 )
+
+type (
+	// ListQueuesOptions provides options for List() to control things like page size.
+	// NOTE: Use the ListQueuesWith* methods to specify this.
+	ListQueuesOptions struct {
+		top  int
+		skip int
+	}
+
+	// ListQueuesOption represents named options for listing topics
+	ListQueuesOption func(*ListQueuesOptions) error
+)
+
+// ListQueuesWithSkip will skip the specified number of entities
+func ListQueuesWithSkip(skip int) ListQueuesOption {
+	return func(options *ListQueuesOptions) error {
+		options.skip = skip
+		return nil
+	}
+}
+
+// ListQueuesWithTop will return at most `top` results
+func ListQueuesWithTop(top int) ListQueuesOption {
+	return func(options *ListQueuesOptions) error {
+		options.top = top
+		return nil
+	}
+}
 
 // TargetURI provides an absolute address to a target entity
 func (e Entity) TargetURI() string {
@@ -233,7 +261,7 @@ func (qm *QueueManager) Delete(ctx context.Context, name string) error {
 	res, err := qm.entityManager.Delete(ctx, "/"+name)
 	defer closeRes(ctx, res)
 
-	return err
+	return checkForError(ctx, err, res)
 }
 
 // Put creates or updates a Service Bus Queue
@@ -280,8 +308,7 @@ func (qm *QueueManager) Put(ctx context.Context, name string, opts ...QueueManag
 	res, err := qm.entityManager.Put(ctx, "/"+name, reqBytes, mw...)
 	defer closeRes(ctx, res)
 
-	if err != nil {
-		tab.For(ctx).Error(err)
+	if err := checkForError(ctx, err, res); err != nil {
 		return nil, err
 	}
 
@@ -300,15 +327,24 @@ func (qm *QueueManager) Put(ctx context.Context, name string, opts ...QueueManag
 }
 
 // List fetches all of the queues for a Service Bus Namespace
-func (qm *QueueManager) List(ctx context.Context) ([]*QueueEntity, error) {
+func (qm *QueueManager) List(ctx context.Context, options ...ListQueuesOption) ([]*QueueEntity, error) {
 	ctx, span := qm.startSpanFromContext(ctx, "sb.QueueManager.List")
 	defer span.End()
 
-	res, err := qm.entityManager.Get(ctx, `/$Resources/Queues`)
+	listQueuesOptions := ListQueuesOptions{}
+
+	for _, option := range options {
+		if err := option(&listQueuesOptions); err != nil {
+			return nil, err
+		}
+	}
+
+	basePath := internal.ConstructAtomPath(`/$Resources/Queues`, listQueuesOptions.skip, listQueuesOptions.top)
+
+	res, err := qm.entityManager.Get(ctx, basePath)
 	defer closeRes(ctx, res)
 
-	if err != nil {
-		tab.For(ctx).Error(err)
+	if err := checkForError(ctx, err, res); err != nil {
 		return nil, err
 	}
 
@@ -339,13 +375,8 @@ func (qm *QueueManager) Get(ctx context.Context, name string) (*QueueEntity, err
 	res, err := qm.entityManager.Get(ctx, name)
 	defer closeRes(ctx, res)
 
-	if err != nil {
-		tab.For(ctx).Error(err)
+	if err := checkForError(ctx, err, res); err != nil {
 		return nil, err
-	}
-
-	if res.StatusCode == http.StatusNotFound {
-		return nil, ErrNotFound{EntityPath: res.Request.URL.Path}
 	}
 
 	b, err := ioutil.ReadAll(res.Body)
