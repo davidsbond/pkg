@@ -23,7 +23,7 @@
 // kafkapubsub does not support Message.Nack; Message.Nackable will return
 // false, and Message.Nack will panic if called.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, kafkapubsub registers
 // for the scheme "kafka".
@@ -34,22 +34,22 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Escaping
+// # Escaping
 //
 // Go CDK supports all UTF-8 strings. No escaping is required for Kafka.
 // Message metadata is supported through Kafka Headers, which allow arbitrary
 // []byte for both key and value. These are converted to string for use in
 // Message.Metadata.
 //
-// As
+// # As
 //
 // kafkapubsub exposes the following types for As:
-//  - Topic: sarama.SyncProducer
-//  - Subscription: sarama.ConsumerGroup, sarama.ConsumerGroupSession (may be nil during session renegotiation, and session may go stale at any time)
-//  - Message: *sarama.ConsumerMessage
-//  - Message.BeforeSend: *sarama.ProducerMessage
-//  - Message.AfterSend: None
-//  - Error: sarama.ConsumerError, sarama.ConsumerErrors, sarama.ProducerError, sarama.ProducerErrors, sarama.ConfigurationError, sarama.PacketDecodingError, sarama.PacketEncodingError, sarama.KError
+//   - Topic: sarama.SyncProducer
+//   - Subscription: sarama.ConsumerGroup, sarama.ConsumerGroupSession (may be nil during session renegotiation, and session may go stale at any time)
+//   - Message: *sarama.ConsumerMessage
+//   - Message.BeforeSend: *sarama.ProducerMessage
+//   - Message.AfterSend: None
+//   - Error: sarama.ConsumerError, sarama.ConsumerErrors, sarama.ProducerError, sarama.ProducerErrors, sarama.ConfigurationError, sarama.PacketDecodingError, sarama.PacketEncodingError, sarama.KError
 package kafkapubsub // import "gocloud.dev/pubsub/kafkapubsub"
 
 import (
@@ -139,7 +139,10 @@ const Scheme = "kafka"
 //
 // For subscriptions, the URL's host+path is used as the group name,
 // and the "topic" query parameter(s) are used as the set of topics to
-// subscribe to.
+// subscribe to. The "offset" parameter is available to subscribers to set
+// the Kafka consumer's initial offset. Where "oldest" starts consuming from
+// the oldest offset of the consumer group and "newest" starts consuming from
+// the most recent offset on the topic.
 type URLOpener struct {
 	// Brokers is the slice of brokers in the Kafka cluster.
 	Brokers []string
@@ -164,12 +167,30 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	q := u.Query()
-	topics := q["topic"]
-	q.Del("topic")
-	for param := range q {
-		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+	var topics []string
+	for param, value := range u.Query() {
+		switch param {
+		case "topic":
+			topics = value
+		case "offset":
+			if len(value) == 0 {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+			}
+
+			offset := value[0]
+			switch offset {
+			case "oldest":
+				o.Config.Consumer.Offsets.Initial = sarama.OffsetOldest
+			case "newest":
+				o.Config.Consumer.Offsets.Initial = sarama.OffsetNewest
+			default:
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, offset)
+			}
+		default:
+			return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+		}
 	}
+
 	group := path.Join(u.Host, u.Path)
 	return OpenSubscription(o.Brokers, o.Config, group, topics, &o.SubscriptionOptions)
 }
