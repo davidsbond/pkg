@@ -54,6 +54,9 @@ type JetStreamManager interface {
 	// AddConsumer adds a consumer to a stream.
 	AddConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*ConsumerInfo, error)
 
+	// UpdateConsumer updates an existing consumer.
+	UpdateConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*ConsumerInfo, error)
+
 	// DeleteConsumer deletes a consumer.
 	DeleteConsumer(stream, consumer string, opts ...JSOpt) error
 
@@ -74,23 +77,38 @@ type JetStreamManager interface {
 // There are sensible defaults for most. If no subjects are
 // given the name will be used as the only subject.
 type StreamConfig struct {
-	Name         string          `json:"name"`
-	Subjects     []string        `json:"subjects,omitempty"`
-	Retention    RetentionPolicy `json:"retention"`
-	MaxConsumers int             `json:"max_consumers"`
-	MaxMsgs      int64           `json:"max_msgs"`
-	MaxBytes     int64           `json:"max_bytes"`
-	Discard      DiscardPolicy   `json:"discard"`
-	MaxAge       time.Duration   `json:"max_age"`
-	MaxMsgSize   int32           `json:"max_msg_size,omitempty"`
-	Storage      StorageType     `json:"storage"`
-	Replicas     int             `json:"num_replicas"`
-	NoAck        bool            `json:"no_ack,omitempty"`
-	Template     string          `json:"template_owner,omitempty"`
-	Duplicates   time.Duration   `json:"duplicate_window,omitempty"`
-	Placement    *Placement      `json:"placement,omitempty"`
-	Mirror       *StreamSource   `json:"mirror,omitempty"`
-	Sources      []*StreamSource `json:"sources,omitempty"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description,omitempty"`
+	Subjects          []string        `json:"subjects,omitempty"`
+	Retention         RetentionPolicy `json:"retention"`
+	MaxConsumers      int             `json:"max_consumers"`
+	MaxMsgs           int64           `json:"max_msgs"`
+	MaxBytes          int64           `json:"max_bytes"`
+	Discard           DiscardPolicy   `json:"discard"`
+	MaxAge            time.Duration   `json:"max_age"`
+	MaxMsgsPerSubject int64           `json:"max_msgs_per_subject"`
+	MaxMsgSize        int32           `json:"max_msg_size,omitempty"`
+	Storage           StorageType     `json:"storage"`
+	Replicas          int             `json:"num_replicas"`
+	NoAck             bool            `json:"no_ack,omitempty"`
+	Template          string          `json:"template_owner,omitempty"`
+	Duplicates        time.Duration   `json:"duplicate_window,omitempty"`
+	Placement         *Placement      `json:"placement,omitempty"`
+	Mirror            *StreamSource   `json:"mirror,omitempty"`
+	Sources           []*StreamSource `json:"sources,omitempty"`
+	Sealed            bool            `json:"sealed,omitempty"`
+	DenyDelete        bool            `json:"deny_delete,omitempty"`
+	DenyPurge         bool            `json:"deny_purge,omitempty"`
+	AllowRollup       bool            `json:"allow_rollup_hdrs,omitempty"`
+
+	// Allow republish of the message after being sequenced and stored.
+	RePublish *SubjectMapping `json:"republish,omitempty"`
+}
+
+// SubjectMapping allows a source subject to be mapped to a destination subject for republishing.
+type SubjectMapping struct {
+	Source      string `json:"src,omitempty"`
+	Destination string `json:"dest"`
 }
 
 // Placement is used to guide placement of streams in clustered JetStream.
@@ -118,6 +136,7 @@ type ExternalStream struct {
 // apiError is included in all API responses if there was an error.
 type apiError struct {
 	Code        int    `json:"code"`
+	ErrorCode   int    `json:"err_code"`
 	Description string `json:"description,omitempty"`
 }
 
@@ -146,6 +165,7 @@ type AccountInfo struct {
 	Store     uint64        `json:"storage"`
 	Streams   int           `json:"streams"`
 	Consumers int           `json:"consumers"`
+	Domain    string        `json:"domain"`
 	API       APIStats      `json:"api"`
 	Limits    AccountLimits `json:"limits"`
 }
@@ -170,6 +190,8 @@ type accountInfoResponse struct {
 }
 
 // AccountInfo retrieves info about the JetStream usage from the current account.
+// If JetStream is not enabled, this will return ErrJetStreamNotEnabled
+// Other errors can happen but are generally considered retryable
 func (js *js) AccountInfo(opts ...JSOpt) (*AccountInfo, error) {
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
@@ -179,8 +201,12 @@ func (js *js) AccountInfo(opts ...JSOpt) (*AccountInfo, error) {
 		defer cancel()
 	}
 
-	resp, err := js.nc.RequestWithContext(o.ctx, js.apiSubj(apiAccountInfo), nil)
+	resp, err := js.apiRequestWithContext(o.ctx, js.apiSubj(apiAccountInfo), nil)
 	if err != nil {
+		// todo maybe nats server should never have no responder on this subject and always respond if they know there is no js to be had
+		if err == ErrNoResponders {
+			err = ErrJetStreamNotEnabled
+		}
 		return nil, err
 	}
 	var info accountInfoResponse
@@ -212,6 +238,9 @@ type consumerResponse struct {
 
 // AddConsumer will add a JetStream consumer.
 func (js *js) AddConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*ConsumerInfo, error) {
+	if err := checkStreamName(stream); err != nil {
+		return nil, err
+	}
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return nil, err
@@ -220,9 +249,6 @@ func (js *js) AddConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*C
 		defer cancel()
 	}
 
-	if stream == _EMPTY_ {
-		return nil, ErrStreamNameRequired
-	}
 	req, err := json.Marshal(&createConsumerRequest{Stream: stream, Config: cfg})
 	if err != nil {
 		return nil, err
@@ -230,15 +256,15 @@ func (js *js) AddConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*C
 
 	var ccSubj string
 	if cfg != nil && cfg.Durable != _EMPTY_ {
-		if strings.Contains(cfg.Durable, ".") {
-			return nil, ErrInvalidDurableName
+		if err := checkDurName(cfg.Durable); err != nil {
+			return nil, err
 		}
 		ccSubj = fmt.Sprintf(apiDurableCreateT, stream, cfg.Durable)
 	} else {
 		ccSubj = fmt.Sprintf(apiConsumerCreateT, stream)
 	}
 
-	resp, err := js.nc.RequestWithContext(o.ctx, js.apiSubj(ccSubj), req)
+	resp, err := js.apiRequestWithContext(o.ctx, js.apiSubj(ccSubj), req)
 	if err != nil {
 		if err == ErrNoResponders {
 			err = ErrJetStreamNotEnabled
@@ -251,9 +277,28 @@ func (js *js) AddConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*C
 		return nil, err
 	}
 	if info.Error != nil {
+		if info.Error.ErrorCode == 10059 {
+			return nil, ErrStreamNotFound
+		}
+		if info.Error.Code == 404 {
+			return nil, ErrConsumerNotFound
+		}
 		return nil, errors.New(info.Error.Description)
 	}
 	return info.ConsumerInfo, nil
+}
+
+func (js *js) UpdateConsumer(stream string, cfg *ConsumerConfig, opts ...JSOpt) (*ConsumerInfo, error) {
+	if err := checkStreamName(stream); err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, ErrConsumerConfigRequired
+	}
+	if cfg.Durable == _EMPTY_ {
+		return nil, ErrInvalidDurableName
+	}
+	return js.AddConsumer(stream, cfg, opts...)
 }
 
 // consumerDeleteResponse is the response for a Consumer delete request.
@@ -262,8 +307,34 @@ type consumerDeleteResponse struct {
 	Success bool `json:"success,omitempty"`
 }
 
+func checkStreamName(stream string) error {
+	if stream == _EMPTY_ {
+		return ErrStreamNameRequired
+	}
+	if strings.Contains(stream, ".") {
+		return ErrInvalidStreamName
+	}
+	return nil
+}
+
+func checkConsumerName(consumer string) error {
+	if consumer == _EMPTY_ {
+		return ErrConsumerNameRequired
+	}
+	if strings.Contains(consumer, ".") {
+		return ErrInvalidConsumerName
+	}
+	return nil
+}
+
 // DeleteConsumer deletes a Consumer.
 func (js *js) DeleteConsumer(stream, consumer string, opts ...JSOpt) error {
+	if err := checkStreamName(stream); err != nil {
+		return err
+	}
+	if err := checkConsumerName(consumer); err != nil {
+		return err
+	}
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return err
@@ -272,12 +343,8 @@ func (js *js) DeleteConsumer(stream, consumer string, opts ...JSOpt) error {
 		defer cancel()
 	}
 
-	if stream == _EMPTY_ {
-		return ErrStreamNameRequired
-	}
-
 	dcSubj := js.apiSubj(fmt.Sprintf(apiConsumerDeleteT, stream, consumer))
-	r, err := js.nc.RequestWithContext(o.ctx, dcSubj, nil)
+	r, err := js.apiRequestWithContext(o.ctx, dcSubj, nil)
 	if err != nil {
 		return err
 	}
@@ -285,7 +352,11 @@ func (js *js) DeleteConsumer(stream, consumer string, opts ...JSOpt) error {
 	if err := json.Unmarshal(r.Data, &resp); err != nil {
 		return err
 	}
+
 	if resp.Error != nil {
+		if resp.Error.Code == 404 {
+			return ErrConsumerNotFound
+		}
 		return errors.New(resp.Error.Description)
 	}
 	return nil
@@ -293,6 +364,12 @@ func (js *js) DeleteConsumer(stream, consumer string, opts ...JSOpt) error {
 
 // ConsumerInfo returns information about a Consumer.
 func (js *js) ConsumerInfo(stream, consumer string, opts ...JSOpt) (*ConsumerInfo, error) {
+	if err := checkStreamName(stream); err != nil {
+		return nil, err
+	}
+	if err := checkConsumerName(consumer); err != nil {
+		return nil, err
+	}
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return nil, err
@@ -332,8 +409,8 @@ func (c *consumerLister) Next() bool {
 	if c.err != nil {
 		return false
 	}
-	if c.stream == _EMPTY_ {
-		c.err = ErrStreamNameRequired
+	if err := checkStreamName(c.stream); err != nil {
+		c.err = err
 		return false
 	}
 	if c.pageInfo != nil && c.offset >= c.pageInfo.Total {
@@ -356,7 +433,7 @@ func (c *consumerLister) Next() bool {
 	}
 
 	clSubj := c.js.apiSubj(fmt.Sprintf(apiConsumerListT, c.stream))
-	r, err := c.js.nc.RequestWithContext(ctx, clSubj, req)
+	r, err := c.js.apiRequestWithContext(ctx, clSubj, req)
 	if err != nil {
 		c.err = err
 		return false
@@ -437,8 +514,8 @@ func (c *consumerNamesLister) Next() bool {
 	if c.err != nil {
 		return false
 	}
-	if c.stream == _EMPTY_ {
-		c.err = ErrStreamNameRequired
+	if err := checkStreamName(c.stream); err != nil {
+		c.err = err
 		return false
 	}
 	if c.pageInfo != nil && c.offset >= c.pageInfo.Total {
@@ -453,7 +530,7 @@ func (c *consumerNamesLister) Next() bool {
 	}
 
 	clSubj := c.js.apiSubj(fmt.Sprintf(apiConsumerNamesT, c.stream))
-	r, err := c.js.nc.RequestWithContext(ctx, clSubj, nil)
+	r, err := c.js.apiRequestWithContext(ctx, clSubj, nil)
 	if err != nil {
 		c.err = err
 		return false
@@ -519,6 +596,12 @@ type streamCreateResponse struct {
 }
 
 func (js *js) AddStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error) {
+	if cfg == nil {
+		return nil, ErrStreamConfigRequired
+	}
+	if err := checkStreamName(cfg.Name); err != nil {
+		return nil, err
+	}
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return nil, err
@@ -527,21 +610,13 @@ func (js *js) AddStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error) {
 		defer cancel()
 	}
 
-	if cfg == nil || cfg.Name == _EMPTY_ {
-		return nil, ErrStreamNameRequired
-	}
-
-	if strings.Contains(cfg.Name, ".") {
-		return nil, ErrInvalidStreamName
-	}
-
 	req, err := json.Marshal(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	csSubj := js.apiSubj(fmt.Sprintf(apiStreamCreateT, cfg.Name))
-	r, err := js.nc.RequestWithContext(o.ctx, csSubj, req)
+	r, err := js.apiRequestWithContext(o.ctx, csSubj, req)
 	if err != nil {
 		return nil, err
 	}
@@ -550,18 +625,21 @@ func (js *js) AddStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error) {
 		return nil, err
 	}
 	if resp.Error != nil {
+		if resp.Error.ErrorCode == 10058 {
+			return nil, ErrStreamNameAlreadyInUse
+		}
 		return nil, errors.New(resp.Error.Description)
 	}
+
 	return resp.StreamInfo, nil
 }
 
 type streamInfoResponse = streamCreateResponse
 
 func (js *js) StreamInfo(stream string, opts ...JSOpt) (*StreamInfo, error) {
-	if strings.Contains(stream, ".") {
-		return nil, ErrInvalidStreamName
+	if err := checkStreamName(stream); err != nil {
+		return nil, err
 	}
-
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return nil, err
@@ -571,7 +649,7 @@ func (js *js) StreamInfo(stream string, opts ...JSOpt) (*StreamInfo, error) {
 	}
 
 	csSubj := js.apiSubj(fmt.Sprintf(apiStreamInfoT, stream))
-	r, err := js.nc.RequestWithContext(o.ctx, csSubj, nil)
+	r, err := js.apiRequestWithContext(o.ctx, csSubj, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -580,8 +658,12 @@ func (js *js) StreamInfo(stream string, opts ...JSOpt) (*StreamInfo, error) {
 		return nil, err
 	}
 	if resp.Error != nil {
-		return nil, errors.New(resp.Error.Description)
+		if resp.Error.Code == 404 {
+			return nil, ErrStreamNotFound
+		}
+		return nil, fmt.Errorf("nats: %s", resp.Error.Description)
 	}
+
 	return resp.StreamInfo, nil
 }
 
@@ -633,6 +715,12 @@ type PeerInfo struct {
 
 // UpdateStream updates a Stream.
 func (js *js) UpdateStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error) {
+	if cfg == nil {
+		return nil, ErrStreamConfigRequired
+	}
+	if err := checkStreamName(cfg.Name); err != nil {
+		return nil, err
+	}
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return nil, err
@@ -641,17 +729,13 @@ func (js *js) UpdateStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error
 		defer cancel()
 	}
 
-	if cfg == nil || cfg.Name == _EMPTY_ {
-		return nil, ErrStreamNameRequired
-	}
-
 	req, err := json.Marshal(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	usSubj := js.apiSubj(fmt.Sprintf(apiStreamUpdateT, cfg.Name))
-	r, err := js.nc.RequestWithContext(o.ctx, usSubj, req)
+	r, err := js.apiRequestWithContext(o.ctx, usSubj, req)
 	if err != nil {
 		return nil, err
 	}
@@ -673,6 +757,9 @@ type streamDeleteResponse struct {
 
 // DeleteStream deletes a Stream.
 func (js *js) DeleteStream(name string, opts ...JSOpt) error {
+	if err := checkStreamName(name); err != nil {
+		return err
+	}
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return err
@@ -681,12 +768,8 @@ func (js *js) DeleteStream(name string, opts ...JSOpt) error {
 		defer cancel()
 	}
 
-	if name == _EMPTY_ {
-		return ErrStreamNameRequired
-	}
-
 	dsSubj := js.apiSubj(fmt.Sprintf(apiStreamDeleteT, name))
-	r, err := js.nc.RequestWithContext(o.ctx, dsSubj, nil)
+	r, err := js.apiRequestWithContext(o.ctx, dsSubj, nil)
 	if err != nil {
 		return err
 	}
@@ -694,14 +777,19 @@ func (js *js) DeleteStream(name string, opts ...JSOpt) error {
 	if err := json.Unmarshal(r.Data, &resp); err != nil {
 		return err
 	}
+
 	if resp.Error != nil {
+		if resp.Error.Code == 404 {
+			return ErrStreamNotFound
+		}
 		return errors.New(resp.Error.Description)
 	}
 	return nil
 }
 
 type apiMsgGetRequest struct {
-	Seq uint64 `json:"seq"`
+	Seq     uint64 `json:"seq,omitempty"`
+	LastFor string `json:"last_by_subj,omitempty"`
 }
 
 // RawStreamMsg is a raw message stored in JetStream.
@@ -726,11 +814,20 @@ type storedMsg struct {
 type apiMsgGetResponse struct {
 	apiResponse
 	Message *storedMsg `json:"message,omitempty"`
-	Success bool       `json:"success,omitempty"`
+}
+
+// GetLastMsg retrieves the last raw stream message stored in JetStream by subject.
+func (js *js) GetLastMsg(name, subject string, opts ...JSOpt) (*RawStreamMsg, error) {
+	return js.getMsg(name, &apiMsgGetRequest{LastFor: subject}, opts...)
 }
 
 // GetMsg retrieves a raw stream message stored in JetStream by sequence number.
 func (js *js) GetMsg(name string, seq uint64, opts ...JSOpt) (*RawStreamMsg, error) {
+	return js.getMsg(name, &apiMsgGetRequest{Seq: seq}, opts...)
+}
+
+// Low level getMsg
+func (js *js) getMsg(name string, mreq *apiMsgGetRequest, opts ...JSOpt) (*RawStreamMsg, error) {
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return nil, err
@@ -743,13 +840,13 @@ func (js *js) GetMsg(name string, seq uint64, opts ...JSOpt) (*RawStreamMsg, err
 		return nil, ErrStreamNameRequired
 	}
 
-	req, err := json.Marshal(&apiMsgGetRequest{Seq: seq})
+	req, err := json.Marshal(mreq)
 	if err != nil {
 		return nil, err
 	}
 
 	dsSubj := js.apiSubj(fmt.Sprintf(apiMsgGetT, name))
-	r, err := js.nc.RequestWithContext(o.ctx, dsSubj, req)
+	r, err := js.apiRequestWithContext(o.ctx, dsSubj, req)
 	if err != nil {
 		return nil, err
 	}
@@ -759,13 +856,16 @@ func (js *js) GetMsg(name string, seq uint64, opts ...JSOpt) (*RawStreamMsg, err
 		return nil, err
 	}
 	if resp.Error != nil {
-		return nil, errors.New(resp.Error.Description)
+		if resp.Error.Code == 404 && strings.Contains(resp.Error.Description, "message") {
+			return nil, ErrMsgNotFound
+		}
+		return nil, fmt.Errorf("nats: %s", resp.Error.Description)
 	}
 
 	msg := resp.Message
 
 	var hdr Header
-	if msg.Header != nil {
+	if len(msg.Header) > 0 {
 		hdr, err = decodeHeadersMsg(msg.Header)
 		if err != nil {
 			return nil, err
@@ -811,7 +911,7 @@ func (js *js) DeleteMsg(name string, seq uint64, opts ...JSOpt) error {
 	}
 
 	dsSubj := js.apiSubj(fmt.Sprintf(apiMsgDeleteT, name))
-	r, err := js.nc.RequestWithContext(o.ctx, dsSubj, req)
+	r, err := js.apiRequestWithContext(o.ctx, dsSubj, req)
 	if err != nil {
 		return err
 	}
@@ -825,6 +925,16 @@ func (js *js) DeleteMsg(name string, seq uint64, opts ...JSOpt) error {
 	return nil
 }
 
+// streamPurgeRequest is optional request information to the purge API.
+type streamPurgeRequest struct {
+	// Purge up to but not including sequence.
+	Sequence uint64 `json:"seq,omitempty"`
+	// Subject to match against messages for the purge command.
+	Subject string `json:"filter,omitempty"`
+	// Number of messages to keep.
+	Keep uint64 `json:"keep,omitempty"`
+}
+
 type streamPurgeResponse struct {
 	apiResponse
 	Success bool   `json:"success,omitempty"`
@@ -832,7 +942,14 @@ type streamPurgeResponse struct {
 }
 
 // PurgeStream purges messages on a Stream.
-func (js *js) PurgeStream(name string, opts ...JSOpt) error {
+func (js *js) PurgeStream(stream string, opts ...JSOpt) error {
+	if err := checkStreamName(stream); err != nil {
+		return err
+	}
+	return js.purgeStream(stream, nil)
+}
+
+func (js *js) purgeStream(stream string, req *streamPurgeRequest, opts ...JSOpt) error {
 	o, cancel, err := getJSContextOpts(js.opts, opts...)
 	if err != nil {
 		return err
@@ -841,8 +958,15 @@ func (js *js) PurgeStream(name string, opts ...JSOpt) error {
 		defer cancel()
 	}
 
-	psSubj := js.apiSubj(fmt.Sprintf(apiStreamPurgeT, name))
-	r, err := js.nc.RequestWithContext(o.ctx, psSubj, nil)
+	var b []byte
+	if req != nil {
+		if b, err = json.Marshal(req); err != nil {
+			return err
+		}
+	}
+
+	psSubj := js.apiSubj(fmt.Sprintf(apiStreamPurgeT, stream))
+	r, err := js.apiRequestWithContext(o.ctx, psSubj, b)
 	if err != nil {
 		return err
 	}
@@ -906,8 +1030,8 @@ func (s *streamLister) Next() bool {
 		defer cancel()
 	}
 
-	slSubj := s.js.apiSubj(apiStreamList)
-	r, err := s.js.nc.RequestWithContext(ctx, slSubj, req)
+	slSubj := s.js.apiSubj(apiStreamListT)
+	r, err := s.js.apiRequestWithContext(ctx, slSubj, req)
 	if err != nil {
 		s.err = err
 		return false
@@ -991,7 +1115,7 @@ func (l *streamNamesLister) Next() bool {
 		defer cancel()
 	}
 
-	r, err := l.js.nc.RequestWithContext(ctx, l.js.apiSubj(apiStreams), nil)
+	r, err := l.js.apiRequestWithContext(ctx, l.js.apiSubj(apiStreams), nil)
 	if err != nil {
 		l.err = err
 		return false
@@ -1069,7 +1193,7 @@ func getJSContextOpts(defs *jsOpts, opts ...JSOpt) (*jsOpts, context.CancelFunc,
 	if o.ctx == nil && o.wait > 0 {
 		o.ctx, cancel = context.WithTimeout(context.Background(), o.wait)
 	}
-	if o.pre == "" {
+	if o.pre == _EMPTY_ {
 		o.pre = defs.pre
 	}
 

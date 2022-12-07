@@ -18,31 +18,32 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/hashicorp/memberlist v0.2.4
-	github.com/jackc/pgtype v1.10.0
-	github.com/jackc/pgx/v4 v4.15.0
+	github.com/hashicorp/memberlist v0.3.1
+	github.com/jackc/pgtype v1.11.0
+	github.com/jackc/pgx/v4 v4.16.1
 	github.com/jlaffaye/ftp v0.0.0-20201112195030-9aae4d151126
 	github.com/luna-duclos/instrumentedsql v1.1.3
 	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201015064105-f9d01e123f16
 	github.com/mattn/go-sqlite3 v1.14.8
+	github.com/nats-io/jwt v1.2.2 // indirect
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.12.2
 	github.com/sebdah/markdown-toc v0.0.0-20171116085747-3bb461875c34
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.0
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
 	github.com/uber/jaeger-lib v2.4.0+incompatible // indirect
 	github.com/unrolled/secure v1.0.9
 	github.com/urfave/cli/v2 v2.3.0
-	go.uber.org/automaxprocs v1.4.0
-	gocloud.dev v0.23.0
+	go.uber.org/automaxprocs v1.5.1
+	gocloud.dev v0.27.0
 	gocloud.dev/pubsub/kafkapubsub v0.23.0
-	gocloud.dev/pubsub/natspubsub v0.23.0
+	gocloud.dev/pubsub/natspubsub v0.27.0
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.42.0
-	google.golang.org/protobuf v1.26.0
+	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
+	google.golang.org/grpc v1.48.0
+	google.golang.org/protobuf v1.28.1
 	mvdan.cc/gofumpt v0.1.1
 )
