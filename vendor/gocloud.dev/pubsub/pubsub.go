@@ -18,8 +18,7 @@
 //
 // See https://gocloud.dev/howto/pubsub/ for a detailed how-to guide.
 //
-//
-// At-most-once and At-least-once Delivery
+// # At-most-once and At-least-once Delivery
 //
 // The semantics of message delivery vary across PubSub services.
 // Some services guarantee that messages received by subscribers but not
@@ -34,22 +33,23 @@
 // documentation for more information about message delivery semantics.
 //
 // After receiving a Message via Subscription.Receive:
-//  - Always call Message.Ack or Message.Nack after processing the message.
-//  - For some drivers, Ack will be a no-op.
-//  - For some drivers, Nack is not supported and will panic; you can call
-//    Message.Nackable to see.
+//   - Always call Message.Ack or Message.Nack after processing the message.
+//   - For some drivers, Ack will be a no-op.
+//   - For some drivers, Nack is not supported and will panic; you can call
+//     Message.Nackable to see.
 //
-// OpenCensus Integration
+// # OpenCensus Integration
 //
 // OpenCensus supports tracing and metric collection for multiple languages and
 // backend providers. See https://opencensus.io.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
-//  - Topic.Send
-//  - Topic.Shutdown
-//  - Subscription.Receive
-//  - Subscription.Shutdown
-//  - The internal driver methods SendBatch, SendAcks and ReceiveBatch.
+//   - Topic.Send
+//   - Topic.Shutdown
+//   - Subscription.Receive
+//   - Subscription.Shutdown
+//   - The internal driver methods SendBatch, SendAcks and ReceiveBatch.
+//
 // All trace and metric names begin with the package import path.
 // The traces add the method name.
 // For example, "gocloud.dev/pubsub/Topic.Send".
@@ -386,8 +386,7 @@ type Subscription struct {
 	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returned to the user yet
 	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
 	runningBatchSize float64           // running number of messages to request via ReceiveBatch
-	throughputStart  time.Time         // start time for throughput measurement, or the zero Time if queue is empty
-	throughputEnd    time.Time         // end time for throughput measurement, or the zero Time if queue is not empty
+	throughputStart  time.Time         // start time for throughput measurement
 	throughputCount  int               // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
@@ -471,14 +470,11 @@ func (s *Subscription) updateBatchSize() int {
 	} else {
 		// Update s.runningBatchSize based on throughput since our last time here,
 		// as measured by the ratio of the number of messages returned to elapsed
-		// time when there were messages available in the queue.
-		if s.throughputEnd.IsZero() {
-			s.throughputEnd = now
-		}
-		elapsed := s.throughputEnd.Sub(s.throughputStart)
-		if elapsed == 0 {
-			// Avoid divide-by-zero.
-			elapsed = 1 * time.Millisecond
+		// time.
+		elapsed := now.Sub(s.throughputStart)
+		if elapsed < 100*time.Millisecond {
+			// Avoid divide-by-zero and huge numbers.
+			elapsed = 100 * time.Millisecond
 		}
 		msgsPerSec := float64(s.throughputCount) / elapsed.Seconds()
 
@@ -500,13 +496,7 @@ func (s *Subscription) updateBatchSize() int {
 	}
 
 	// Reset throughput measurement markers.
-	if len(s.q) > 0 {
-		s.throughputStart = now
-	} else {
-		// Will get set to non-zero value when we receive some messages.
-		s.throughputStart = time.Time{}
-	}
-	s.throughputEnd = time.Time{}
+	s.throughputStart = now
 	s.throughputCount = 0
 
 	// Using Ceil guarantees at least one message.
@@ -520,15 +510,18 @@ func (s *Subscription) updateBatchSize() int {
 // Receive retries retryable errors from the underlying driver forever.
 // Therefore, if Receive returns an error, either:
 // 1. It is a non-retryable error from the underlying driver, either from
-//    an attempt to fetch more messages or from an attempt to ack messages.
-//    Operator intervention may be required (e.g., invalid resource, quota
-//    error, etc.). Receive will return the same error from then on, so the
-//    application should log the error and either recreate the Subscription,
-//    or exit.
+//
+//	an attempt to fetch more messages or from an attempt to ack messages.
+//	Operator intervention may be required (e.g., invalid resource, quota
+//	error, etc.). Receive will return the same error from then on, so the
+//	application should log the error and either recreate the Subscription,
+//	or exit.
+//
 // 2. The provided ctx is Done. Error() on the returned error will include both
-//    the ctx error and the underlying driver error, and ErrorAs on it
-//    can access the underlying driver error type if needed. Receive may
-//    be called again with a fresh ctx.
+//
+//	the ctx error and the underlying driver error, and ErrorAs on it
+//	can access the underlying driver error type if needed. Receive may
+//	be called again with a fresh ctx.
 //
 // Callers can distinguish between the two by checking if the ctx they passed
 // is Done, or via xerrors.Is(err, context.DeadlineExceeded or context.Canceled)
@@ -566,6 +559,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			// waiting goroutines, by closing s.waitc.
 			s.waitc = make(chan struct{})
 			batchSize := s.updateBatchSize()
+			// log.Printf("BATCH SIZE %d", batchSize)
 
 			go func() {
 				if s.preReceiveBatchHook != nil {
@@ -579,12 +573,6 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 					s.err = err
 				} else if len(msgs) > 0 {
 					s.q = append(s.q, msgs...)
-				}
-				// Set the start time for measuring throughput even if we didn't get
-				// any messages; this allows batch size to decay over time if there
-				// aren't any message available.
-				if s.throughputStart.IsZero() {
-					s.throughputStart = time.Now()
 				}
 				close(s.waitc)
 				s.waitc = nil
@@ -634,10 +622,6 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 				}
 			})
 			return m2, nil
-		}
-		// No messages are available. Close the interval for throughput measurement.
-		if s.throughputEnd.IsZero() && !s.throughputStart.IsZero() && s.throughputCount > 0 {
-			s.throughputEnd = time.Now()
 		}
 		// A call to ReceiveBatch must be in flight. Wait for it.
 		waitc := s.waitc
