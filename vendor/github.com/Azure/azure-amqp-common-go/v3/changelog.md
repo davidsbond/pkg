@@ -1,7 +1,29 @@
 # Change Log
 
-## `head`
-- fix refresh error to return the underlying http error instead of the token
+## `v3.2.0`
+- Change the default credits for the RPC link to be more reasonable (1000)
+  [PR#54](https://github.com/Azure/azure-amqp-common-go/pull/54)
+
+## `v3.1.2`
+- Fixing a potential race condition when an RPC link is shut down while still sending requests
+  or handling responses.
+  [PR#55](https://github.com/Azure/azure-amqp-common-go/pull/55)
+- Upgrading to go-amqp v0.13.13, which fixes an issue with simultaneous settling on the rpc link.
+
+## `v3.1.1`
+- Change `Link` so it can handle parallel requests. 
+  [PR#52](https://github.com/Azure/azure-amqp-common-go/pull/52)
+
+## `v3.1.0`
+- Add support for passing managed identity user-assigned client ID.
+
+## `v3.0.1`
+- add context to message deposition methods
+- update dependencies
+
+## `v3.0.0`
+- switch from pack.ag/amqp to github.com/Azure/go-amqp
+- bump major version
 
 ## `v2.1.1`
 - bump amqp to v0.12.1
