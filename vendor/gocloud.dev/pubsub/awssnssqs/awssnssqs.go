@@ -17,7 +17,7 @@
 // messages to SQS (Simple Queuing Service). It also provides an implementation
 // of pubsub.Subscription that receives messages from SQS.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic, awssnssqs registers for the scheme "awssns" for
 // an SNS topic, and "awssqs" for an SQS topic. For pubsub.OpenSubscription,
@@ -30,43 +30,44 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Message Delivery Semantics
+// # Message Delivery Semantics
 //
 // AWS SQS supports at-least-once semantics; applications must call Message.Ack
 // after processing a message, or it will be redelivered.
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
-// Escaping
+// # Escaping
 //
 // Go CDK supports all UTF-8 strings; to make this work with services lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are required for awssnssqs:
-//  - Metadata keys: Characters other than "a-zA-z0-9_-.", and additionally "."
-//    when it's at the start of the key or the previous character was ".",
-//    are escaped using "__0x<hex>__". These characters were determined by
-//    experimentation.
-//  - Metadata values: Escaped using URL encoding.
-//  - Message body: AWS SNS/SQS only supports UTF-8 strings. See the
-//    BodyBase64Encoding enum in TopicOptions for strategies on how to send
-//    non-UTF-8 message bodies. By default, non-UTF-8 message bodies are base64
-//    encoded.
+//   - Metadata keys: Characters other than "a-zA-z0-9_-.", and additionally "."
+//     when it's at the start of the key or the previous character was ".",
+//     are escaped using "__0x<hex>__". These characters were determined by
+//     experimentation.
+//   - Metadata values: Escaped using URL encoding.
+//   - Message body: AWS SNS/SQS only supports UTF-8 strings. See the
+//     BodyBase64Encoding enum in TopicOptions for strategies on how to send
+//     non-UTF-8 message bodies. By default, non-UTF-8 message bodies are base64
+//     encoded.
 //
-// As
+// # As
 //
 // awssnssqs exposes the following types for As:
-//  - Topic: *sns.SNS for OpenSNSTopic; *sqs.SQS for OpenSQSTopic
-//  - Subscription: *sqs.SQS
-//  - Message: *sqs.Message
-//  - Message.BeforeSend: *sns.PublishInput for OpenSNSTopic; *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput(deprecated) for OpenSQSTopic
-//  - Message.AfterSend: *sns.PublishOutput for OpenSNSTopic; *sqs.SendMessageBatchResultEntry for OpenSQSTopic
-//  - Error: awserror.Error
+//   - Topic: (V1) *sns.SNS for OpenSNSTopic, *sqs.SQS for OpenSQSTopic; (V2) *snsv2.Client for OpenSNSTopicV2, *sqsv2.Client for OpenSQSTopicV2
+//   - Subscription: (V1) *sqs.SQS; (V2) *sqsv2.Client
+//   - Message: (V1) *sqs.Message; (V2) sqstypesv2.Message
+//   - Message.BeforeSend: (V1) *sns.PublishInput for OpenSNSTopic, *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput(deprecated) for OpenSQSTopic; (V2) *snsv2.PublishInput for OpenSNSTopicV2, *sqstypesv2.SendMessageBatchRequestEntry for OpenSQSTopicV2
+//   - Message.AfterSend: (V1) *sns.PublishOutput for OpenSNSTopic, *sqs.SendMessageBatchResultEntry for OpenSQSTopic; (V2) *snsv2.PublishOutput for OpenSNSTopicV2, sqstypesv2.SendMessageBatchResultEntry for OpenSQSTopicV2
+//   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
 package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
 
 import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
@@ -76,11 +77,16 @@ import (
 	"time"
 	"unicode/utf8"
 
+	snsv2 "github.com/aws/aws-sdk-go-v2/service/sns"
+	snstypesv2 "github.com/aws/aws-sdk-go-v2/service/sns/types"
+	sqsv2 "github.com/aws/aws-sdk-go-v2/service/sqs"
+	sqstypesv2 "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/smithy-go"
 	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
@@ -144,7 +150,10 @@ type lazySessionOpener struct {
 	err    error
 }
 
-func (o *lazySessionOpener) defaultOpener() (*URLOpener, error) {
+func (o *lazySessionOpener) defaultOpener(u *url.URL) (*URLOpener, error) {
+	if gcaws.UseV2(u.Query()) {
+		return &URLOpener{UseV2: true}, nil
+	}
 	o.init.Do(func() {
 		sess, err := gcaws.NewDefaultSession()
 		if err != nil {
@@ -159,7 +168,7 @@ func (o *lazySessionOpener) defaultOpener() (*URLOpener, error) {
 }
 
 func (o *lazySessionOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
-	opener, err := o.defaultOpener()
+	opener, err := o.defaultOpener(u)
 	if err != nil {
 		return nil, fmt.Errorf("open topic %v: failed to open default session: %v", u, err)
 	}
@@ -167,7 +176,7 @@ func (o *lazySessionOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubs
 }
 
 func (o *lazySessionOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	opener, err := o.defaultOpener()
+	opener, err := o.defaultOpener(u)
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: failed to open default session: %v", u, err)
 	}
@@ -194,16 +203,29 @@ const SQSScheme = "awssqs"
 // For SQS topics and subscriptions, the URL's host+path is prefixed with
 // "https://" to create the queue URL.
 //
-// The following query parameters are supported:
+// Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
+// or anything else to accept the default.
+//
+// For V1, see gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// for overriding the aws.Session from the URL.
+// For V2, see gocloud.dev/aws/V2ConfigFromURLParams.
+//
+// In addition, the following query parameters are supported:
 //
 //   - raw (for "awssqs" Subscriptions only): sets SubscriberOptions.Raw. The
+//     value must be parseable by `strconv.ParseBool`.
+//   - nacklazy (for "awssqs" Subscriptions only): sets SubscriberOptions.NackLazy. The
 //     value must be parseable by `strconv.ParseBool`.
 //   - waittime: sets SubscriberOptions.WaitTime, in time.ParseDuration formats.
 //
 // See gocloud.dev/aws/ConfigFromURLParams for other query parameters
 // that affect the default AWS session.
 type URLOpener struct {
+	// UseV2 indicates whether the AWS SDK V2 should be used.
+	UseV2 bool
+
 	// ConfigProvider configures the connection to AWS.
+	// It must be set to a non-nil value if UseV2 is false.
 	ConfigProvider client.ConfigProvider
 
 	// TopicOptions specifies the options to pass to OpenTopic.
@@ -214,6 +236,25 @@ type URLOpener struct {
 
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	// Trim leading "/" if host is empty, so that
+	// awssns:///arn:aws:service:region:accountid:resourceType/resourcePath
+	// gives "arn:..." instead of "/arn:...".
+	topicARN := strings.TrimPrefix(path.Join(u.Host, u.Path), "/")
+	qURL := "https://" + path.Join(u.Host, u.Path)
+	if o.UseV2 {
+		cfg, err := gcaws.V2ConfigFromURLParams(ctx, u.Query())
+		if err != nil {
+			return nil, fmt.Errorf("open topic %v: %v", u, err)
+		}
+		switch u.Scheme {
+		case SNSScheme:
+			return OpenSNSTopicV2(ctx, snsv2.NewFromConfig(cfg), topicARN, &o.TopicOptions), nil
+		case SQSScheme:
+			return OpenSQSTopicV2(ctx, sqsv2.NewFromConfig(cfg), qURL, &o.TopicOptions), nil
+		default:
+			return nil, fmt.Errorf("open topic %v: unsupported scheme", u)
+		}
+	}
 	configProvider := &gcaws.ConfigOverrider{
 		Base: o.ConfigProvider,
 	}
@@ -224,13 +265,8 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	switch u.Scheme {
 	case SNSScheme:
-		// Trim leading "/" if host is empty, so that
-		// awssns:///arn:aws:service:region:accountid:resourceType/resourcePath
-		// gives "arn:..." instead of "/arn:...".
-		topicARN := strings.TrimPrefix(path.Join(u.Host, u.Path), "/")
 		return OpenSNSTopic(ctx, configProvider, topicARN, &o.TopicOptions), nil
 	case SQSScheme:
-		qURL := "https://" + path.Join(u.Host, u.Path)
 		return OpenSQSTopic(ctx, configProvider, qURL, &o.TopicOptions), nil
 	default:
 		return nil, fmt.Errorf("open topic %v: unsupported scheme", u)
@@ -239,9 +275,6 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	configProvider := &gcaws.ConfigOverrider{
-		Base: o.ConfigProvider,
-	}
 	// Clone the options since we might override Raw.
 	opts := o.SubscriptionOptions
 	q := u.Query()
@@ -253,6 +286,14 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		}
 		q.Del("raw")
 	}
+	if nackLazyStr := q.Get("nacklazy"); nackLazyStr != "" {
+		var err error
+		opts.NackLazy, err = strconv.ParseBool(nackLazyStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %q for nacklazy: %v", nackLazyStr, err)
+		}
+		q.Del("nacklazy")
+	}
 	if waitTimeStr := q.Get("waittime"); waitTimeStr != "" {
 		var err error
 		opts.WaitTime, err = time.ParseDuration(waitTimeStr)
@@ -261,19 +302,31 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		}
 		q.Del("waittime")
 	}
+	qURL := "https://" + path.Join(u.Host, u.Path)
+	if o.UseV2 {
+		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
+		if err != nil {
+			return nil, fmt.Errorf("open subscription %v: %v", u, err)
+		}
+		return OpenSubscriptionV2(ctx, sqsv2.NewFromConfig(cfg), qURL, &opts), nil
+	}
 	overrideCfg, err := gcaws.ConfigFromURLParams(q)
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: %v", u, err)
 	}
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
+	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	qURL := "https://" + path.Join(u.Host, u.Path)
 	return OpenSubscription(ctx, configProvider, qURL, &opts), nil
 }
 
 type snsTopic struct {
-	client *sns.SNS
-	arn    string
-	opts   *TopicOptions
+	useV2    bool
+	client   *sns.SNS
+	clientV2 *snsv2.Client
+	arn      string
+	opts     *TopicOptions
 }
 
 // BodyBase64Encoding is an enum of strategies for when to base64 message
@@ -314,6 +367,9 @@ type TopicOptions struct {
 	// BodyBase64Encoding determines when message bodies are base64 encoded.
 	// The default is NonUTF8Only.
 	BodyBase64Encoding BodyBase64Encoding
+
+	// BatcherOptions adds constraints to the default batching done for sends.
+	BatcherOptions batcher.Options
 }
 
 // OpenTopic is a shortcut for OpenSNSTopic, provided for backwards compatibility.
@@ -324,19 +380,42 @@ func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string,
 // OpenSNSTopic opens a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
 func OpenSNSTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openSNSTopic(ctx, sess, topicARN, opts), sendBatcherOptsSNS)
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	bo := sendBatcherOptsSNS.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openSNSTopic(ctx, sns.New(sess), topicARN, opts), bo)
+}
+
+// OpenSNSTopicV2 opens a topic that sends to the SNS topic with the given Amazon
+// Resource Name (ARN), using AWS SDK V2.
+func OpenSNSTopicV2(ctx context.Context, client *snsv2.Client, topicARN string, opts *TopicOptions) *pubsub.Topic {
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	bo := sendBatcherOptsSNS.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openSNSTopicV2(ctx, client, topicARN, opts), bo)
 }
 
 // openSNSTopic returns the driver for OpenSNSTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openSNSTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) driver.Topic {
-	if opts == nil {
-		opts = &TopicOptions{}
-	}
+func openSNSTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) driver.Topic {
 	return &snsTopic{
-		client: sns.New(sess),
+		useV2:  false,
+		client: client,
 		arn:    topicARN,
 		opts:   opts,
+	}
+}
+
+// openSNSTopicV2 returns the driver for OpenSNSTopic. This function exists so the test
+// harness can get the driver interface implementation if it needs to.
+func openSNSTopicV2(ctx context.Context, client *snsv2.Client, topicARN string, opts *TopicOptions) driver.Topic {
+	return &snsTopic{
+		useV2:    true,
+		clientV2: client,
+		arn:      topicARN,
+		opts:     opts,
 	}
 }
 
@@ -382,6 +461,59 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	}
 	dm := dms[0]
 
+	if t.useV2 {
+		attrs := map[string]snstypesv2.MessageAttributeValue{}
+		for k, v := range encodeMetadata(dm.Metadata) {
+			attrs[k] = snstypesv2.MessageAttributeValue{
+				DataType:    stringDataType,
+				StringValue: aws.String(v),
+			}
+		}
+		body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
+		if didEncode {
+			attrs[base64EncodedKey] = snstypesv2.MessageAttributeValue{
+				DataType:    stringDataType,
+				StringValue: aws.String("true"),
+			}
+		}
+		if len(attrs) == 0 {
+			attrs = nil
+		}
+		input := &snsv2.PublishInput{
+			Message:           aws.String(body),
+			MessageAttributes: attrs,
+			TopicArn:          &t.arn,
+		}
+		if dm.BeforeSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**snsv2.PublishInput); ok {
+					*p = input
+					return true
+				}
+				return false
+			}
+			if err := dm.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
+		po, err := t.clientV2.Publish(ctx, input)
+		if err != nil {
+			return err
+		}
+		if dm.AfterSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**snsv2.PublishOutput); ok {
+					*p = po
+					return true
+				}
+				return false
+			}
+			if err := dm.AfterSend(asFunc); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	attrs := map[string]*sns.MessageAttributeValue{}
 	for k, v := range encodeMetadata(dm.Metadata) {
 		attrs[k] = &sns.MessageAttributeValue{
@@ -443,6 +575,14 @@ func (t *snsTopic) IsRetryable(error) bool {
 
 // As implements driver.Topic.As.
 func (t *snsTopic) As(i interface{}) bool {
+	if t.useV2 {
+		c, ok := i.(**snsv2.Client)
+		if !ok {
+			return false
+		}
+		*c = t.clientV2
+		return true
+	}
 	c, ok := i.(**sns.SNS)
 	if !ok {
 		return false
@@ -453,7 +593,7 @@ func (t *snsTopic) As(i interface{}) bool {
 
 // ErrorAs implements driver.Topic.ErrorAs.
 func (t *snsTopic) ErrorAs(err error, i interface{}) bool {
-	return errorAs(err, i)
+	return errorAs(err, t.useV2, i)
 }
 
 // ErrorCode implements driver.Topic.ErrorCode.
@@ -465,28 +605,124 @@ func (t *snsTopic) ErrorCode(err error) gcerrors.ErrorCode {
 func (*snsTopic) Close() error { return nil }
 
 type sqsTopic struct {
-	client *sqs.SQS
-	qURL   string
-	opts   *TopicOptions
+	useV2    bool
+	client   *sqs.SQS
+	clientV2 *sqsv2.Client
+	qURL     string
+	opts     *TopicOptions
 }
 
 // OpenSQSTopic opens a topic that sends to the SQS topic with the given SQS
 // queue URL.
 func OpenSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openSQSTopic(ctx, sess, qURL, opts), sendBatcherOptsSQS)
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	bo := sendBatcherOptsSQS.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openSQSTopic(ctx, sqs.New(sess), qURL, opts), bo)
+}
+
+// OpenSQSTopicV2 opens a topic that sends to the SQS topic with the given SQS
+// queue URL, using AWS SDK V2.
+func OpenSQSTopicV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *TopicOptions) *pubsub.Topic {
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	bo := sendBatcherOptsSQS.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openSQSTopicV2(ctx, client, qURL, opts), bo)
 }
 
 // openSQSTopic returns the driver for OpenSQSTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, opts *TopicOptions) driver.Topic {
-	if opts == nil {
-		opts = &TopicOptions{}
+func openSQSTopic(ctx context.Context, client *sqs.SQS, qURL string, opts *TopicOptions) driver.Topic {
+	return &sqsTopic{
+		useV2:  false,
+		client: client,
+		qURL:   qURL,
+		opts:   opts,
 	}
-	return &sqsTopic{client: sqs.New(sess), qURL: qURL, opts: opts}
+}
+
+// openSQSTopicV2 returns the driver for OpenSQSTopic. This function exists so the test
+// harness can get the driver interface implementation if it needs to.
+func openSQSTopicV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *TopicOptions) driver.Topic {
+	return &sqsTopic{
+		useV2:    true,
+		clientV2: client,
+		qURL:     qURL,
+		opts:     opts,
+	}
 }
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
+	if t.useV2 {
+		req := &sqsv2.SendMessageBatchInput{
+			QueueUrl: aws.String(t.qURL),
+		}
+		for _, dm := range dms {
+			attrs := map[string]sqstypesv2.MessageAttributeValue{}
+			for k, v := range encodeMetadata(dm.Metadata) {
+				attrs[k] = sqstypesv2.MessageAttributeValue{
+					DataType:    stringDataType,
+					StringValue: aws.String(v),
+				}
+			}
+			body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
+			if didEncode {
+				attrs[base64EncodedKey] = sqstypesv2.MessageAttributeValue{
+					DataType:    stringDataType,
+					StringValue: aws.String("true"),
+				}
+			}
+			if len(attrs) == 0 {
+				attrs = nil
+			}
+			entry := &sqstypesv2.SendMessageBatchRequestEntry{
+				Id:                aws.String(strconv.Itoa(len(req.Entries))),
+				MessageAttributes: attrs,
+				MessageBody:       aws.String(body),
+			}
+			if dm.BeforeSend != nil {
+				asFunc := func(i interface{}) bool {
+					if p, ok := i.(**sqstypesv2.SendMessageBatchRequestEntry); ok {
+						*p = entry
+						return true
+					}
+					return false
+				}
+				if err := dm.BeforeSend(asFunc); err != nil {
+					return err
+				}
+			}
+			req.Entries = append(req.Entries, *entry)
+		}
+		resp, err := t.clientV2.SendMessageBatch(ctx, req)
+		if err != nil {
+			return err
+		}
+		if numFailed := len(resp.Failed); numFailed > 0 {
+			first := resp.Failed[0]
+			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.SendMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+		}
+		if len(resp.Successful) == len(dms) {
+			for n, dm := range dms {
+				if dm.AfterSend != nil {
+					asFunc := func(i interface{}) bool {
+						if p, ok := i.(*sqstypesv2.SendMessageBatchResultEntry); ok {
+							*p = resp.Successful[n]
+							return true
+						}
+						return false
+					}
+					if err := dm.AfterSend(asFunc); err != nil {
+						return err
+					}
+				}
+			}
+		}
+		return nil
+	}
 	req := &sqs.SendMessageBatchInput{
 		QueueUrl: aws.String(t.qURL),
 	}
@@ -585,6 +821,14 @@ func (t *sqsTopic) IsRetryable(error) bool {
 
 // As implements driver.Topic.As.
 func (t *sqsTopic) As(i interface{}) bool {
+	if t.useV2 {
+		c, ok := i.(**sqsv2.Client)
+		if !ok {
+			return false
+		}
+		*c = t.clientV2
+		return true
+	}
 	c, ok := i.(**sqs.SQS)
 	if !ok {
 		return false
@@ -595,7 +839,7 @@ func (t *sqsTopic) As(i interface{}) bool {
 
 // ErrorAs implements driver.Topic.ErrorAs.
 func (t *sqsTopic) ErrorAs(err error, i interface{}) bool {
-	return errorAs(err, i)
+	return errorAs(err, t.useV2, i)
 }
 
 // ErrorCode implements driver.Topic.ErrorCode.
@@ -607,11 +851,16 @@ func (t *sqsTopic) ErrorCode(err error) gcerrors.ErrorCode {
 func (*sqsTopic) Close() error { return nil }
 
 func errorCode(err error) gcerrors.ErrorCode {
-	ae, ok := err.(awserr.Error)
-	if !ok {
+	var code string
+	var ae smithy.APIError
+	if errors.As(err, &ae) {
+		code = ae.ErrorCode()
+	} else if ae, ok := err.(awserr.Error); ok {
+		code = ae.Code()
+	} else {
 		return gcerrors.Unknown
 	}
-	ec, ok := errorCodeMap[ae.Code()]
+	ec, ok := errorCodeMap[code]
 	if !ok {
 		return gcerrors.Unknown
 	}
@@ -657,9 +906,11 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 }
 
 type subscription struct {
-	client *sqs.SQS
-	qURL   string
-	opts   *SubscriptionOptions
+	useV2    bool
+	client   *sqs.SQS
+	clientV2 *sqsv2.Client
+	qURL     string
+	opts     *SubscriptionOptions
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -677,88 +928,203 @@ type SubscriptionOptions struct {
 	// See https://aws.amazon.com/sns/faqs/#Raw_message_delivery.
 	Raw bool
 
+	// NackLazy determines what Nack does.
+	//
+	// By default, Nack uses ChangeMessageVisibility to set the VisibilityTimeout
+	// for the nacked message to 0, so that it will be redelivered immediately.
+	// Set NackLazy to true to bypass this behavior; Nack will do nothing,
+	// and the message will be redelivered after the existing VisibilityTimeout
+	// expires (defaults to 30s, but can be configured per queue).
+	//
+	// See https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html.
+	NackLazy bool
+
 	// WaitTime passed to ReceiveMessage to enable long polling.
 	// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html#sqs-long-polling.
 	// Note that a non-zero WaitTime can delay delivery of messages
 	// by up to that duration.
 	WaitTime time.Duration
+
+	// ReceiveBatcherOptions adds constraints to the default batching done for receives.
+	ReceiveBatcherOptions batcher.Options
+
+	// AckBatcherOptions adds constraints to the default batching done for acks.
+	AckBatcherOptions batcher.Options
 }
 
 // OpenSubscription opens a subscription based on AWS SQS for the given SQS
 // queue URL. The queue is assumed to be subscribed to some SNS topic, though
 // there is no check for this.
 func OpenSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(ctx, sess, qURL, opts), recvBatcherOpts, ackBatcherOpts)
-}
-
-// openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) driver.Subscription {
 	if opts == nil {
 		opts = &SubscriptionOptions{}
 	}
-	return &subscription{client: sqs.New(sess), qURL: qURL, opts: opts}
+	rbo := recvBatcherOpts.NewMergedOptions(&opts.ReceiveBatcherOptions)
+	abo := ackBatcherOpts.NewMergedOptions(&opts.AckBatcherOptions)
+	return pubsub.NewSubscription(openSubscription(ctx, sqs.New(sess), qURL, opts), rbo, abo)
+}
+
+// OpenSubscriptionV2 opens a subscription based on AWS SQS for the given SQS
+// queue URL, using AWS SDK V2. The queue is assumed to be subscribed to some SNS topic, though
+// there is no check for this.
+func OpenSubscriptionV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
+	if opts == nil {
+		opts = &SubscriptionOptions{}
+	}
+	rbo := recvBatcherOpts.NewMergedOptions(&opts.ReceiveBatcherOptions)
+	abo := ackBatcherOpts.NewMergedOptions(&opts.AckBatcherOptions)
+	return pubsub.NewSubscription(openSubscriptionV2(ctx, client, qURL, opts), rbo, abo)
+}
+
+// openSubscription returns a driver.Subscription.
+func openSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) driver.Subscription {
+	return &subscription{
+		useV2:  false,
+		client: client,
+		qURL:   qURL, opts: opts,
+	}
+}
+
+// openSubscriptionV2 returns a driver.Subscription.
+func openSubscriptionV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *SubscriptionOptions) driver.Subscription {
+	return &subscription{
+		useV2:    true,
+		clientV2: client,
+		qURL:     qURL, opts: opts,
+	}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	req := &sqs.ReceiveMessageInput{
-		QueueUrl:              aws.String(s.qURL),
-		MaxNumberOfMessages:   aws.Int64(int64(maxMessages)),
-		MessageAttributeNames: []*string{aws.String("All")},
-		AttributeNames:        []*string{aws.String("All")},
-	}
-	if s.opts.WaitTime != 0 {
-		req.WaitTimeSeconds = aws.Int64(int64(s.opts.WaitTime.Seconds()))
-	}
-	output, err := s.client.ReceiveMessageWithContext(ctx, req)
-	if err != nil {
-		return nil, err
-	}
 	var ms []*driver.Message
-	for _, m := range output.Messages {
-		m := m
-		bodyStr, rawAttrs := extractBody(m, s.opts.Raw)
-
-		decodeIt := false
-		attrs := map[string]string{}
-		for k, v := range rawAttrs {
-			// See BodyBase64Encoding for details on when we base64 decode message bodies.
-			if k == base64EncodedKey {
-				decodeIt = true
-				continue
-			}
-			// See the package comments for more details on escaping of metadata
-			// keys & values.
-			attrs[escape.HexUnescape(k)] = escape.URLUnescape(v)
+	if s.useV2 {
+		req := &sqsv2.ReceiveMessageInput{
+			QueueUrl:              aws.String(s.qURL),
+			MaxNumberOfMessages:   int32(maxMessages),
+			MessageAttributeNames: []string{"All"},
+			AttributeNames:        []sqstypesv2.QueueAttributeName{"All"},
 		}
+		if s.opts.WaitTime != 0 {
+			req.WaitTimeSeconds = int32(s.opts.WaitTime.Seconds())
+		}
+		output, err := s.clientV2.ReceiveMessage(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range output.Messages {
+			m := m
+			bodyStr := aws.StringValue(m.Body)
+			rawAttrs := map[string]string{}
+			for k, v := range m.MessageAttributes {
+				rawAttrs[k] = aws.StringValue(v.StringValue)
+			}
+			bodyStr, rawAttrs = extractBody(bodyStr, rawAttrs, s.opts.Raw)
 
-		var b []byte
-		if decodeIt {
-			var err error
-			b, err = base64.StdEncoding.DecodeString(bodyStr)
-			if err != nil {
-				// Fall back to using the raw message.
+			decodeIt := false
+			attrs := map[string]string{}
+			for k, v := range rawAttrs {
+				// See BodyBase64Encoding for details on when we base64 decode message bodies.
+				if k == base64EncodedKey {
+					decodeIt = true
+					continue
+				}
+				// See the package comments for more details on escaping of metadata
+				// keys & values.
+				attrs[escape.HexUnescape(k)] = escape.URLUnescape(v)
+			}
+
+			var b []byte
+			if decodeIt {
+				var err error
+				b, err = base64.StdEncoding.DecodeString(bodyStr)
+				if err != nil {
+					// Fall back to using the raw message.
+					b = []byte(bodyStr)
+				}
+			} else {
 				b = []byte(bodyStr)
 			}
-		} else {
-			b = []byte(bodyStr)
-		}
 
-		m2 := &driver.Message{
-			LoggableID: aws.StringValue(m.MessageId),
-			Body:       b,
-			Metadata:   attrs,
-			AckID:      m.ReceiptHandle,
-			AsFunc: func(i interface{}) bool {
-				p, ok := i.(**sqs.Message)
-				if !ok {
-					return false
-				}
-				*p = m
-				return true
-			},
+			m2 := &driver.Message{
+				LoggableID: aws.StringValue(m.MessageId),
+				Body:       b,
+				Metadata:   attrs,
+				AckID:      m.ReceiptHandle,
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(*sqstypesv2.Message)
+					if !ok {
+						return false
+					}
+					*p = m
+					return true
+				},
+			}
+			ms = append(ms, m2)
 		}
-		ms = append(ms, m2)
+	} else {
+		req := &sqs.ReceiveMessageInput{
+			QueueUrl:              aws.String(s.qURL),
+			MaxNumberOfMessages:   aws.Int64(int64(maxMessages)),
+			MessageAttributeNames: []*string{aws.String("All")},
+			AttributeNames:        []*string{aws.String("All")},
+		}
+		if s.opts.WaitTime != 0 {
+			req.WaitTimeSeconds = aws.Int64(int64(s.opts.WaitTime.Seconds()))
+		}
+		output, err := s.client.ReceiveMessageWithContext(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range output.Messages {
+			m := m
+			bodyStr := aws.StringValue(m.Body)
+			rawAttrs := map[string]string{}
+			for k, v := range m.MessageAttributes {
+				rawAttrs[k] = aws.StringValue(v.StringValue)
+			}
+			bodyStr, rawAttrs = extractBody(bodyStr, rawAttrs, s.opts.Raw)
+
+			decodeIt := false
+			attrs := map[string]string{}
+			for k, v := range rawAttrs {
+				// See BodyBase64Encoding for details on when we base64 decode message bodies.
+				if k == base64EncodedKey {
+					decodeIt = true
+					continue
+				}
+				// See the package comments for more details on escaping of metadata
+				// keys & values.
+				attrs[escape.HexUnescape(k)] = escape.URLUnescape(v)
+			}
+
+			var b []byte
+			if decodeIt {
+				var err error
+				b, err = base64.StdEncoding.DecodeString(bodyStr)
+				if err != nil {
+					// Fall back to using the raw message.
+					b = []byte(bodyStr)
+				}
+			} else {
+				b = []byte(bodyStr)
+			}
+
+			m2 := &driver.Message{
+				LoggableID: aws.StringValue(m.MessageId),
+				Body:       b,
+				Metadata:   attrs,
+				AckID:      m.ReceiptHandle,
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(**sqs.Message)
+					if !ok {
+						return false
+					}
+					*p = m
+					return true
+				},
+			}
+			ms = append(ms, m2)
+		}
 	}
 	if len(ms) == 0 {
 		// When we return no messages and no error, the portable type will call
@@ -769,21 +1135,15 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	return ms, nil
 }
 
-func extractBody(m *sqs.Message, raw bool) (body string, attributes map[string]string) {
-	bodyStr := aws.StringValue(m.Body)
-	rawAttrs := map[string]string{}
-
+func extractBody(bodyStr string, rawAttrs map[string]string, raw bool) (body string, attributes map[string]string) {
 	// If the user told us that message bodies are raw, or if there are
 	// top-level MessageAttributes, then it's raw.
 	// (SNS JSON message can have attributes, but they are encoded in
 	// the JSON instead of being at the top level).
-	raw = raw || len(m.MessageAttributes) > 0
+	raw = raw || len(rawAttrs) > 0
 	if raw {
 		// For raw messages, the attributes are at the top level
 		// and we leave bodyStr alone.
-		for k, v := range m.MessageAttributes {
-			rawAttrs[k] = aws.StringValue(v.StringValue)
-		}
 		return bodyStr, rawAttrs
 	}
 
@@ -815,6 +1175,26 @@ func extractBody(m *sqs.Message, raw bool) (body string, attributes map[string]s
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	if s.useV2 {
+		req := &sqsv2.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
+		for _, id := range ids {
+			req.Entries = append(req.Entries, sqstypesv2.DeleteMessageBatchRequestEntry{
+				Id:            aws.String(strconv.Itoa(len(req.Entries))),
+				ReceiptHandle: id.(*string),
+			})
+		}
+		resp, err := s.clientV2.DeleteMessageBatch(ctx, req)
+		if err != nil {
+			return err
+		}
+		// Note: DeleteMessageBatch doesn't return failures when you try
+		// to Delete an id that isn't found.
+		if numFailed := len(resp.Failed); numFailed > 0 {
+			first := resp.Failed[0]
+			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.DeleteMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+		}
+		return nil
+	}
 	req := &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
 	for _, id := range ids {
 		req.Entries = append(req.Entries, &sqs.DeleteMessageBatchRequestEntry{
@@ -840,6 +1220,40 @@ func (s *subscription) CanNack() bool { return true }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
+	if s.opts.NackLazy {
+		return nil
+	}
+	if s.useV2 {
+		req := &sqsv2.ChangeMessageVisibilityBatchInput{QueueUrl: aws.String(s.qURL)}
+		for _, id := range ids {
+			req.Entries = append(req.Entries, sqstypesv2.ChangeMessageVisibilityBatchRequestEntry{
+				Id:                aws.String(strconv.Itoa(len(req.Entries))),
+				ReceiptHandle:     id.(*string),
+				VisibilityTimeout: 1,
+			})
+		}
+		resp, err := s.clientV2.ChangeMessageVisibilityBatch(ctx, req)
+		if err != nil {
+			return err
+		}
+		// Note: ChangeMessageVisibilityBatch returns failures when you try to
+		// modify an id that isn't found; drop those.
+		var firstFail sqstypesv2.BatchResultErrorEntry
+		numFailed := 0
+		for _, fail := range resp.Failed {
+			if aws.StringValue(fail.Code) == sqs.ErrCodeReceiptHandleIsInvalid {
+				continue
+			}
+			if numFailed == 0 {
+				firstFail = fail
+			}
+			numFailed++
+		}
+		if numFailed > 0 {
+			return awserr.New(aws.StringValue(firstFail.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(firstFail.Message)), nil)
+		}
+		return nil
+	}
 	req := &sqs.ChangeMessageVisibilityBatchInput{QueueUrl: aws.String(s.qURL)}
 	for _, id := range ids {
 		req.Entries = append(req.Entries, &sqs.ChangeMessageVisibilityBatchRequestEntry{
@@ -879,6 +1293,14 @@ func (*subscription) IsRetryable(error) bool {
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool {
+	if s.useV2 {
+		c, ok := i.(**sqsv2.Client)
+		if !ok {
+			return false
+		}
+		*c = s.clientV2
+		return true
+	}
 	c, ok := i.(**sqs.SQS)
 	if !ok {
 		return false
@@ -889,15 +1311,18 @@ func (s *subscription) As(i interface{}) bool {
 
 // ErrorAs implements driver.Subscription.ErrorAs.
 func (s *subscription) ErrorAs(err error, i interface{}) bool {
-	return errorAs(err, i)
+	return errorAs(err, s.useV2, i)
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode.
-func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
-func errorAs(err error, i interface{}) bool {
+func errorAs(err error, useV2 bool, i interface{}) bool {
+	if useV2 {
+		return errors.As(err, i)
+	}
 	e, ok := err.(awserr.Error)
 	if !ok {
 		return false
