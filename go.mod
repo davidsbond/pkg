@@ -27,7 +27,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.8
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/sebdah/markdown-toc v0.0.0-20171116085747-3bb461875c34
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
